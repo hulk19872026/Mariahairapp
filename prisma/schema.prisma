@@ -199,7 +199,7 @@ model Settings {
   currency String @default("$")
   palette  String @default("fuchsia") // fuchsia | violet | lagoon | sunset | plum
 
-  bizName  String @default("Chair & Comb")
+  bizName  String @default("Maria Hair")
   stylist  String @default("")
   phone    String @default("")
   email    String @default("")

@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: Props) {
   return (
     <main className="narrow">
       <h1>Sign in</h1>
-      <p className="sub">Chair &amp; Comb</p>
+      <p className="sub">Maria Hair</p>
 
       {sp.error && <p className="notice bad">That username or password isn&apos;t right.</p>}
       {sp.reset && (

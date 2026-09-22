@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Chair &amp; Comb — Salon Manager</title>
+<title>Maria Hair — Hair style</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -424,7 +424,7 @@ select.inp{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.
   <aside class="side">
     <div class="brand">
       <div class="brandmark" id="brandmark">C</div>
-      <div class="nm" id="brandname">Chair &amp; Comb</div>
+      <div class="nm" id="brandname">Maria Hair</div>
     </div>
     <nav id="sidenav"></nav>
   </aside>
@@ -2608,7 +2608,7 @@ function bizForm(){
   const f = (n,l,t,ph) => '<label class="field"><span class="lab">'+l+'</span><input class="inp" name="'+n+'" type="'+t+'" value="'+esc(b[n]||'')+'" placeholder="'+esc(ph||'')+'"></label>';
   openSheet({
     title:'Business details',
-    body: f('name','Business name','text','Chair & Comb') + f('stylist','Your name','text','Ava')+
+    body: f('name','Business name','text','Maria Hair') + f('stylist','Your name','text','Ava')+
       '<div class="grid2">'+f('phone','Phone','tel')+f('email','Email','email')+'</div>'+
       f('address','Address','text','12 Mill Lane, Studio 3')+ f('website','Website','url','https://'),
     foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save</button>',
@@ -3441,7 +3441,7 @@ function setTheme(t){
 }
 function applyBrand(){
   applyPalette(S.settings.palette);
-  const n = (S.settings.biz.name || 'Chair & Comb').trim();
+  const n = (S.settings.biz.name || 'Maria Hair').trim();
   $('#brandname').textContent = n;
   const letter = (n[0] || 'C').toUpperCase();
   $('#brandmark').textContent = letter; $('#mbrand').textContent = letter;

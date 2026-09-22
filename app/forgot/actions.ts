@@ -26,10 +26,10 @@ export async function forgotAction(formData: FormData) {
   const plain = tempPassword();
   const r = await sendMail({
     to: user.email,
-    subject: `Your ${st.bizName || "Chair & Comb"} password`,
+    subject: `Your ${st.bizName || "Maria Hair"} password`,
     text:
       `Hi ${user.username},\n\n` +
-      `Here is a new password for your ${st.bizName || "Chair & Comb"} account:\n\n` +
+      `Here is a new password for your ${st.bizName || "Maria Hair"} account:\n\n` +
       `Username: ${user.username}\nPassword: ${plain}\n\n` +
       `Sign in with it, then pick a new password of your own under Setup.\n\n` +
       `If you didn't ask for this, you can ignore this email — nothing else has changed.`,
