@@ -263,6 +263,17 @@ model Coupon {
   @@index([customerId])
 }
 
+// Who can sign in. Passwords are stored as bcrypt hashes and never in the
+// clear; "forgot password" issues a fresh temporary one by email instead.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @default("")
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 // A run of the scheduler, so you can see it is actually firing.
 model CronRun {
   id        String   @id @default(cuid())

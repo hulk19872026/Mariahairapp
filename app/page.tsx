@@ -2,11 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { fmtDate, fmtTime, getSettings, localDate, serviceNames } from "@/lib/automation";
 import { integrationStatus } from "@/lib/senders";
 import { storageName } from "@/lib/storage";
+import { requireUser } from "@/lib/auth";
+import { Nav } from "./nav";
 
 // Everything here reads the database, so never pre-render it at build time.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const me = await requireUser();
   const st = await getSettings();
   const tz = st.timezone || "America/New_York";
   const today = localDate(new Date(), tz);
@@ -26,6 +29,7 @@ export default async function Home() {
 
   return (
     <main>
+      <Nav username={me.username} />
       <h1>{st.bizName || "Chair & Comb"}</h1>
       <p className="sub">{fmtDate(today, "full")}</p>
 

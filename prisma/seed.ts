@@ -4,6 +4,7 @@
  */
 import { prisma } from "../lib/prisma";
 import { getSettings } from "../lib/automation";
+import { ensureDefaultUser } from "../lib/auth";
 
 const SERVICES = [
   { name: "Women's cut", category: "Cut", price: 65, duration: 60 },
@@ -17,6 +18,7 @@ const SERVICES = [
 
 async function main() {
   await getSettings();
+  await ensureDefaultUser();
   const existing = await prisma.service.count();
   if (existing === 0) {
     await prisma.service.createMany({ data: SERVICES });
