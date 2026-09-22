@@ -104,6 +104,13 @@ hr.rule{border:none; border-top:1px solid var(--border); margin:14px 0}
 .stat .k{font-size:.75rem; color:var(--dim); font-weight:600}
 .stat .v{font-size:1.5rem; margin-top:2px}
 .stat .v.money{color:var(--brass)}
+/* tiles that open something */
+button.stat.tap{font:inherit; color:inherit; text-align:left; cursor:pointer; width:100%;
+  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease}
+button.stat.tap:hover{border-color:var(--sc, var(--plum)); box-shadow:var(--shadow)}
+button.stat.tap:active{transform:scale(.985)}
+.stat .k{display:flex; align-items:center; gap:4px}
+.stat-chev{width:14px; height:14px; margin-left:auto; stroke:var(--dim); fill:none; stroke-width:2; opacity:.7}
 
 /* buttons */
 .btn{
@@ -1165,10 +1172,10 @@ function viewDashboard(){
     '<button data-new="svc"><span class="qi" style="--qc:var(--brass)">'+svg('scissors')+'</span>Add service</button></div>';
 
   s += '<div class="stats">'+
-    stat('Today', money(revenueBetween(t,t)), true, 'var(--brass)')+
-    stat('This week', money(revenueBetween(ws, addDays(ws,6))), true, 'var(--brass)')+
-    stat('Clients', S.customers.length, false, 'var(--plum)')+
-    stat('Upcoming', upcomingAppts().length, false, 'var(--teal)')+
+    stat('Today', money(revenueBetween(t,t)), true, 'var(--brass)', 'payments')+
+    stat('This week', money(revenueBetween(ws, addDays(ws,6))), true, 'var(--brass)', 'payments')+
+    stat('Clients', S.customers.length, false, 'var(--plum)', 'customers')+
+    stat('Upcoming', upcomingAppts().length, false, 'var(--teal)', 'upcoming')+
   '</div>';
 
   s += '<div class="cols" style="margin-top:22px">';
@@ -1286,9 +1293,46 @@ function automationLine(){
   if (LASTRUN) bits.push('last checked '+timeAgo(LASTRUN.at));
   return bits.join(' · ');
 }
-function stat(k, v, money_, color){
-  return '<div class="stat"'+(color ? ' style="--sc:'+color+'"' : '')+'><div class="k">'+esc(k)+'</div>'+
-    '<div class="v num'+(money_?' money':'')+'">'+v+'</div></div>';
+/* `action` makes the tile a button: data-stat="<action>" is picked up by the
+   click handler at the bottom of the page */
+function stat(k, v, money_, color, action){
+  const tag = action ? 'button' : 'div';
+  return '<'+tag+' class="stat'+(action?' tap':'')+'"'+(action ? ' data-stat="'+action+'" aria-label="'+esc(k)+': '+esc(String(v))+'"' : '')+
+    (color ? ' style="--sc:'+color+'"' : '')+'><div class="k">'+esc(k)+(action ? svg('chev','stat-chev') : '')+'</div>'+
+    '<div class="v num'+(money_?' money':'')+'">'+v+'</div></'+tag+'>';
+}
+
+/* every future appointment, grouped by day, opened from the Upcoming tile */
+function upcomingSheet(){
+  const list = upcomingAppts();
+  let body;
+  if (!list.length){
+    body = '<div class="card empty"><h3>Nothing booked ahead</h3>'+
+      '<p class="small">Book someone in and they\'ll show up here.</p>'+
+      '<button class="btn primary" data-new="appt">'+svg('plus')+'New appointment</button></div>';
+  } else {
+    const days = [];
+    list.forEach(a => {
+      let g = days[days.length-1];
+      if (!g || g.date !== a.date){ g = {date:a.date, appts:[]}; days.push(g); }
+      g.appts.push(a);
+    });
+    body = days.map(g => {
+      const rel = fmtDate(g.date,'rel'), long = fmtDate(g.date,'long');
+      const soon = rel === 'Today' || rel === 'Tomorrow';
+      return '<div class="sec-head" style="margin-top:14px"><h3>'+esc(soon ? rel : long)+'</h3>'+
+        (soon ? '<span class="small dim">'+esc(long)+'</span>' : '')+
+        '<span class="grow"></span><button class="btn sm ghost" data-goday="'+g.date+'">Calendar</button></div>'+
+        '<div class="card list">'+g.appts.map(apptRow).join('')+'</div>';
+    }).join('');
+  }
+  openSheet({
+    title: 'Upcoming · '+list.length,
+    body,
+    foot:'<button class="btn ghost" data-act="close">Close</button><button class="btn primary" data-new="appt">'+svg('plus')+'New appointment</button>',
+    onMount(root){ $('[data-act="close"]', root).onclick = closeSheet; },
+    refresh(){ sheetStack.pop(); upcomingSheet(); }
+  });
 }
 
 /* ============================================================
@@ -3138,6 +3182,12 @@ document.addEventListener('click', e => {
     else if (k === 'appt') apptForm(null, Object.assign({},
       el.dataset.cust ? {customerId: el.dataset.cust} : {},
       el.dataset.date ? {date: el.dataset.date} : {}));
+    return;
+  }
+  if ((el = hit('data-stat'))){
+    const k = el.dataset.stat;
+    if (k === 'upcoming') upcomingSheet();
+    else go(k);
     return;
   }
   if ((el = hit('data-appt'))){ apptSheet(el.dataset.appt); return; }
