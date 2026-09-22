@@ -2,7 +2,7 @@ import { fromZonedTime } from "date-fns-tz";
 import { prisma } from "./prisma";
 import { fill, template } from "./templates";
 import { send, toE164 } from "./senders";
-import type { Appointment, Customer, Service, Settings } from "@prisma/client";
+import type { Appointment, Customer, Prisma, Service, Settings } from "@prisma/client";
 
 /* -------------------------------------------------------------------------
    Settings
@@ -11,7 +11,7 @@ import type { Appointment, Customer, Service, Settings } from "@prisma/client";
 export async function getSettings(): Promise<Settings> {
   const existing = await prisma.settings.findUnique({ where: { id: "business" } });
   if (existing) return existing;
-  const hours: Record<number, unknown> = {};
+  const hours: Record<string, Prisma.InputJsonObject> = {};
   for (let d = 0; d < 7; d++)
     hours[d] = { open: d >= 1 && d <= 6, start: 540, end: 1080, breakOn: false, breakStart: 780, breakEnd: 840 };
   return prisma.settings.create({ data: { id: "business", hours } });

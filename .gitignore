@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
+
+# local uploads (disk storage driver)
+data/
+uploads/
