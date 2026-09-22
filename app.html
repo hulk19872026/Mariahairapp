@@ -1,0 +1,3376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chair &amp; Comb — Salon Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#241A28; --plum:#5B2F52; --plum-soft:#7E4A73; --brass:#B4832F; --brass-soft:#E8D3A9;
+  --chalk:#FBF7F6; --paper:#FFFFFF; --mist:#EFE5E9; --line:#E2D4DA; --muted:#7B6C77;
+  --teal:#2F6F62; --rose:#A8525C; --amber:#B5772B;
+  --bg:var(--chalk); --surface:var(--paper); --text:var(--ink); --dim:var(--muted); --border:var(--line);
+  --shadow:0 1px 2px rgba(36,26,40,.05), 0 8px 24px -16px rgba(36,26,40,.35);
+  --r:14px; --r-sm:9px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#191320; --surface:#221A29; --text:#F4ECF1; --dim:#A798A6; --border:#38293C;
+  --mist:#2C2133; --plum:#C79BBC; --plum-soft:#A9769E; --brass:#D9AE61; --brass-soft:#4A3A1E;
+  --teal:#67B29F; --rose:#D98A93; --amber:#DBA365;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}}
+:root[data-theme="dark"]{
+  --bg:#191320; --surface:#221A29; --text:#F4ECF1; --dim:#A798A6; --border:#38293C;
+  --mist:#2C2133; --plum:#C79BBC; --plum-soft:#A9769E; --brass:#D9AE61; --brass-soft:#4A3A1E;
+  --teal:#67B29F; --rose:#D98A93; --amber:#DBA365;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px); -webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100%; background:var(--bg); color:var(--text);
+  font-family:Karla,"Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:Fraunces,Georgia,"Times New Roman",serif; font-weight:600; margin:0; line-height:1.15; letter-spacing:-.01em}
+h1{font-size:1.65rem} h2{font-size:1.22rem} h3{font-size:1.02rem}
+p{margin:0}
+button,input,select,textarea{font:inherit; color:inherit}
+button{cursor:pointer; background:none; border:none; padding:0}
+a{color:var(--plum)}
+::selection{background:var(--brass-soft); color:var(--ink)}
+:focus-visible{outline:2.5px solid var(--brass); outline-offset:2px; border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+/* ---------- shell ---------- */
+.app{display:flex; min-height:100vh}
+.side{display:none}
+.main{flex:1; min-width:0; padding:0 0 92px}
+.wrap{max-width:1180px; margin:0 auto; padding:0 16px}
+
+.topbar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:30; background:var(--bg);
+  border-bottom:1px solid var(--border);
+}
+.topbar-in{max-width:1180px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px; min-height:58px}
+.topbar h1{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.brandmark{
+  width:34px; height:34px; border-radius:11px; color:#fff;
+  background:linear-gradient(135deg, var(--g1, var(--plum)), var(--g2, var(--brass)));
+  display:grid; place-items:center; font-family:Fraunces,serif; font-weight:700; font-size:16px; flex:none;
+}
+
+
+/* ---------- bottom nav (mobile) ---------- */
+.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex;
+  background:var(--surface); border-top:1px solid var(--border);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.tabbar button{flex:1; padding:9px 2px 8px; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--dim); font-size:.63rem; font-weight:600; letter-spacing:.01em}
+.tabbar button svg{width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.tabbar button[aria-current="page"]{color:var(--plum)}
+.tabbar button[aria-current="page"] svg{stroke-width:2.1}
+
+/* ---------- cards & structure ---------- */
+.card{background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow)}
+.pad{padding:16px}
+.sec{margin-top:22px}
+.sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:10px}
+.sec-head h2{flex:1}
+.stack{display:flex; flex-direction:column; gap:10px}
+.row{display:flex; gap:10px; align-items:center}
+.row-tight{display:flex; gap:6px; align-items:center}
+.spread{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.grow{flex:1; min-width:0}
+.dim{color:var(--dim)}
+.small{font-size:.82rem}
+.tiny{font-size:.74rem}
+.num{font-family:Fraunces,serif; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.trunc{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.center{text-align:center}
+hr.rule{border:none; border-top:1px solid var(--border); margin:14px 0}
+
+/* stat strip */
+.stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+.stat{background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:13px 14px;
+  position:relative; overflow:hidden}
+.stat::before{content:""; position:absolute; left:0; top:0; right:0; height:3px; background:var(--sc, var(--plum))}
+.stat .k{font-size:.75rem; color:var(--dim); font-weight:600}
+.stat .v{font-size:1.5rem; margin-top:2px}
+.stat .v.money{color:var(--brass)}
+
+/* buttons */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  min-height:46px; padding:0 17px; border-radius:11px; font-weight:600; font-size:.94rem;
+  background:var(--mist); color:var(--text); border:1px solid transparent; transition:transform .06s ease;
+}
+.btn:active{transform:scale(.975)}
+.btn svg{width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.btn.primary{background:var(--plum); color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#1B1420}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary{color:#1B1420}}
+.btn.ghost{background:transparent; border-color:var(--border)}
+.btn.danger{background:transparent; border-color:var(--border); color:var(--rose)}
+.btn.sm{min-height:36px; padding:0 12px; font-size:.84rem; border-radius:9px}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.45; pointer-events:none}
+.iconbtn{width:42px; height:42px; border-radius:11px; display:grid; place-items:center; color:var(--text); background:var(--mist); flex:none}
+.iconbtn.plain{background:transparent}
+.iconbtn svg{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+
+.quick{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
+.quick button{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:13px 8px;
+  display:flex; flex-direction:column; align-items:center; gap:7px; font-size:.78rem; font-weight:600; box-shadow:var(--shadow);
+}
+.quick .qi{width:40px; height:40px; border-radius:13px; display:grid; place-items:center;
+  background:color-mix(in srgb, var(--qc, var(--plum)) 14%, transparent); color:var(--qc, var(--plum))}
+.quick svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+
+/* today, at the top of the dashboard */
+.hero{margin:16px 0 4px; padding:20px 20px 18px; border-radius:20px; color:#fff; position:relative; overflow:hidden;
+  background:linear-gradient(125deg, var(--g1, var(--plum)) 0%, var(--g2, var(--brass)) 100%);
+  box-shadow:0 14px 32px -18px var(--g1, var(--plum))}
+.hero::after{content:""; position:absolute; right:-40px; top:-60px; width:200px; height:200px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.22), rgba(255,255,255,0) 70%); pointer-events:none}
+.hero .hd{font-size:.82rem; font-weight:700; opacity:.95; letter-spacing:.01em}
+.hero h1{color:#fff; margin-top:4px; font-size:1.75rem}
+.hero .hn{font-size:.86rem; margin-top:7px; opacity:.95}
+.hero .hn b{font-weight:700}
+
+/* colour-scheme picker */
+.swatches{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px}
+.swatch{border:2px solid var(--border); border-radius:14px; padding:8px; background:var(--surface); text-align:left;
+  display:flex; flex-direction:column; gap:7px; font-size:.78rem; font-weight:700}
+.swatch i{display:block; height:30px; border-radius:9px}
+.swatch[aria-pressed="true"]{border-color:var(--plum); box-shadow:0 0 0 3px color-mix(in srgb, var(--plum) 22%, transparent)}
+
+/* chips / status */
+.chip{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:99px; font-size:.72rem; font-weight:700; background:var(--mist); color:var(--dim)}
+.chip .dot{width:7px; height:7px; border-radius:99px; background:currentColor}
+.st-scheduled{color:var(--plum); background:color-mix(in srgb,var(--plum) 13%,transparent)}
+.st-confirmed{color:var(--teal); background:color-mix(in srgb,var(--teal) 15%,transparent)}
+.st-completed{color:var(--brass); background:color-mix(in srgb,var(--brass) 16%,transparent)}
+.st-cancelled{color:var(--rose); background:color-mix(in srgb,var(--rose) 14%,transparent)}
+.st-noshow{color:var(--amber); background:color-mix(in srgb,var(--amber) 16%,transparent)}
+
+/* avatar */
+/* every client gets their own colour, worked out from their name */
+.av{width:42px; height:42px; border-radius:99px; flex:none; display:grid; place-items:center; font-weight:700; font-size:.86rem;
+  background:hsl(var(--avh, 330) 85% 91%); color:hsl(var(--avh, 330) 60% 28%); overflow:hidden; letter-spacing:.02em}
+:root[data-theme="dark"] .av{background:hsl(var(--avh, 330) 38% 24%); color:hsl(var(--avh, 330) 90% 80%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .av{background:hsl(var(--avh, 330) 38% 24%); color:hsl(var(--avh, 330) 90% 80%)}}
+.av img{width:100%; height:100%; object-fit:cover}
+.av.lg{width:64px; height:64px; font-size:1.2rem}
+.av.sm{width:32px; height:32px; font-size:.72rem}
+
+/* list rows */
+.list{display:flex; flex-direction:column}
+.item{display:flex; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); text-align:left; width:100%; background:none}
+.item:last-child{border-bottom:none}
+.item:active{background:var(--mist)}
+.item .nm{font-weight:600}
+.item > svg{width:18px; height:18px; stroke:var(--dim); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none}
+
+/* timeline (today) */
+.tl{position:relative; padding-left:64px}
+.tl .slot{position:relative; padding:0 0 12px}
+.tl .time{position:absolute; left:-64px; width:54px; text-align:right; font-size:.78rem; font-weight:700; color:var(--dim); padding-top:13px; font-variant-numeric:tabular-nums}
+.tl .slot::before{content:""; position:absolute; left:-18px; top:20px; width:9px; height:9px; border-radius:99px; background:var(--plum); box-shadow:0 0 0 3px var(--bg)}
+.tl .slot::after{content:""; position:absolute; left:-14.5px; top:29px; bottom:-2px; width:2px; background:var(--border)}
+.tl .slot:last-child::after{display:none}
+.tl .blk{background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--plum); border-radius:var(--r); padding:12px 13px; box-shadow:var(--shadow); width:100%; text-align:left; display:block}
+.tl .blk.s-confirmed{border-left-color:var(--teal)}
+.tl .blk.s-completed{border-left-color:var(--brass)}
+.tl .blk.s-cancelled{border-left-color:var(--rose); opacity:.6}
+.tl .blk.s-noshow{border-left-color:var(--amber); opacity:.75}
+
+/* empty state */
+.empty{padding:30px 18px; text-align:center; color:var(--dim)}
+.empty h3{color:var(--text); margin-bottom:5px}
+.empty .btn{margin-top:14px}
+
+/* ---------- forms ---------- */
+.field{display:block; margin-bottom:13px}
+.field > .lab{display:block; font-size:.79rem; font-weight:700; color:var(--dim); margin-bottom:5px}
+.inp{
+  width:100%; min-height:46px; padding:11px 13px; background:var(--bg); color:var(--text);
+  border:1.5px solid var(--border); border-radius:11px; appearance:none;
+}
+textarea.inp{min-height:88px; resize:vertical; line-height:1.5}
+select.inp{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%237B6C77' stroke-width='2' stroke-linecap='round'><path d='M6 8l4 4 4-4'/></svg>"); background-repeat:no-repeat; background-position:right 10px center; padding-right:34px}
+.inp:focus{border-color:var(--plum); outline:none}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:0 11px}
+.check{display:flex; gap:10px; align-items:flex-start; padding:11px 0; cursor:pointer}
+.check input{width:21px; height:21px; accent-color:var(--plum); flex:none; margin:1px 0 0}
+.seg{display:flex; background:var(--mist); border-radius:11px; padding:3px; gap:3px}
+.seg button{flex:1; padding:9px 6px; border-radius:8px; font-size:.84rem; font-weight:600; color:var(--dim)}
+.seg button[aria-pressed="true"]{background:var(--surface); color:var(--text); box-shadow:var(--shadow)}
+.picks{display:flex; flex-wrap:wrap; gap:7px}
+.pick{padding:8px 12px; border-radius:99px; border:1.5px solid var(--border); font-size:.84rem; font-weight:600; background:var(--surface)}
+.pick[aria-pressed="true"]{background:var(--plum); color:#fff; border-color:var(--plum)}
+:root[data-theme="dark"] .pick[aria-pressed="true"]{color:#1B1420}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pick[aria-pressed="true"]{color:#1B1420}}
+.err{color:var(--rose); font-size:.78rem; font-weight:600; margin-top:4px}
+.inp.bad{border-color:var(--rose)}
+
+.search{position:relative}
+.search .inp{padding-left:38px}
+.search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; stroke:var(--dim); fill:none; stroke-width:2}
+
+/* ---------- sheet / modal ---------- */
+.scrim{position:fixed; inset:0; background:rgba(28,18,30,.5); z-index:60; opacity:0; pointer-events:none; transition:opacity .18s ease}
+.scrim.on{opacity:1; pointer-events:auto}
+.sheet{
+  position:fixed; left:0; right:0; bottom:0; z-index:61; background:var(--surface);
+  border-radius:20px 20px 0 0; max-height:92vh; display:flex; flex-direction:column;
+  transform:translateY(102%); transition:transform .22s cubic-bezier(.2,.8,.3,1);
+  padding-bottom:env(safe-area-inset-bottom,0px); box-shadow:0 -10px 40px -18px rgba(0,0,0,.5);
+}
+.sheet.on{transform:translateY(0)}
+.sheet-head{display:flex; align-items:center; gap:10px; padding:14px 16px 10px; border-bottom:1px solid var(--border)}
+.sheet-head h2{flex:1; min-width:0}
+.sheet-body{overflow:auto; -webkit-overflow-scrolling:touch; padding:16px; flex:1}
+.sheet-foot{padding:12px 16px 16px; border-top:1px solid var(--border); display:flex; gap:9px}
+.sheet-foot .btn{flex:1}
+.grab{width:38px; height:4px; border-radius:99px; background:var(--border); margin:8px auto 0}
+
+/* toast */
+.toast{position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,16px);
+  background:var(--ink); color:#FBF7F6; padding:11px 17px; border-radius:99px; font-size:.86rem; font-weight:600;
+  z-index:90; opacity:0; pointer-events:none; transition:all .2s ease; max-width:88vw; text-align:center}
+:root[data-theme="dark"] .toast{background:#F4ECF1; color:#191320}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .toast{background:#F4ECF1; color:#191320}}
+.toast.on{opacity:1; transform:translate(-50%,0)}
+
+/* ---------- calendar ---------- */
+.cal-head{display:flex; align-items:center; gap:8px; margin-bottom:12px}
+.cal-head .t{flex:1; font-family:Fraunces,serif; font-weight:600; font-size:1.1rem}
+.month{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+.month .dow{text-align:center; font-size:.68rem; font-weight:700; color:var(--dim); padding:4px 0}
+.month .day{aspect-ratio:1/1.06; border-radius:10px; background:var(--surface); border:1px solid var(--border);
+  padding:4px 3px 3px; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:.8rem; font-weight:600}
+.month .day.off{opacity:.38}
+.month .day.today{border-color:var(--plum); box-shadow:inset 0 0 0 1px var(--plum)}
+.month .day.sel{background:var(--plum); color:#fff; border-color:var(--plum)}
+:root[data-theme="dark"] .month .day.sel{color:#1B1420}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .month .day.sel{color:#1B1420}}
+.month .dots{display:flex; gap:2px; flex-wrap:wrap; justify-content:center}
+.month .dots i{width:5px; height:5px; border-radius:99px; background:var(--plum)}
+.month .day.sel .dots i{background:currentColor}
+
+.grid-cal{display:grid; border:1px solid var(--border); border-radius:var(--r); overflow:hidden; background:var(--surface); position:relative}
+.gc-head{display:grid; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--surface); z-index:2}
+.gc-head div{padding:7px 3px; text-align:center; font-size:.72rem; font-weight:700; border-left:1px solid var(--border)}
+.gc-head div:first-child{border-left:none}
+.gc-head .is-today{color:var(--plum)}
+.gc-body{position:relative; overflow:auto; max-height:62vh}
+.gc-cols{display:grid; position:relative}
+.gc-col{position:relative; border-left:1px solid var(--border)}
+.gc-col:first-child{border-left:none}
+.gc-hour{height:56px; border-top:1px solid var(--border); position:relative}
+.gc-hour:first-child{border-top:none}
+.gc-gut{position:sticky; left:0; z-index:1; background:var(--surface); border-right:1px solid var(--border)}
+.gc-gut .gc-hour{font-size:.66rem; color:var(--dim); font-weight:700; text-align:right; padding:2px 5px 0}
+.ev{position:absolute; left:2px; right:2px; border-radius:7px; padding:3px 5px; font-size:.68rem; line-height:1.24;
+  overflow:hidden; background:color-mix(in srgb,var(--plum) 15%,var(--surface)); border-left:3px solid var(--plum); color:var(--text); text-align:left}
+.ev b{font-weight:700; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ev.s-confirmed{background:color-mix(in srgb,var(--teal) 15%,var(--surface)); border-left-color:var(--teal)}
+.ev.s-completed{background:color-mix(in srgb,var(--brass) 16%,var(--surface)); border-left-color:var(--brass)}
+.ev.s-cancelled{background:color-mix(in srgb,var(--rose) 12%,var(--surface)); border-left-color:var(--rose); opacity:.65; text-decoration:line-through}
+.ev.s-noshow{background:color-mix(in srgb,var(--amber) 15%,var(--surface)); border-left-color:var(--amber)}
+.ev.drag{opacity:.9; box-shadow:0 8px 20px -6px rgba(0,0,0,.45); z-index:5; cursor:grabbing}
+.closed{position:absolute; left:0; right:0; background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--mist) 5px,var(--mist) 10px); pointer-events:none}
+.nowline{position:absolute; left:0; right:0; height:2px; background:var(--rose); z-index:4}
+.nowline::before{content:""; position:absolute; left:-1px; top:-3px; width:8px; height:8px; border-radius:99px; background:var(--rose)}
+
+/* charts */
+.bars{display:flex; flex-direction:column; gap:8px}
+.bar-row{display:grid; grid-template-columns:1fr auto; gap:4px 10px; align-items:center}
+.bar-row .lab{font-size:.84rem; font-weight:600}
+.bar-row .amt{font-size:.84rem; font-weight:700; font-variant-numeric:tabular-nums}
+.bar-track{grid-column:1/-1; height:8px; border-radius:99px; background:var(--mist); overflow:hidden}
+.bar-fill{height:100%; border-radius:99px; background:var(--plum)}
+.spark{display:flex; align-items:flex-end; gap:4px; height:92px}
+.spark .col{flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; justify-content:flex-end; height:100%}
+.spark .col i{width:100%; max-width:34px; border-radius:5px 5px 0 0; background:var(--brass); display:block; min-height:2px}
+.spark .col span{font-size:.64rem; color:var(--dim); font-weight:700}
+
+/* photos */
+.pgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+@media (min-width:640px){ .pgrid{grid-template-columns:repeat(4,1fr); gap:8px} }
+.pcell{position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--mist); border:1px solid var(--border); padding:0}
+.pcell img{width:100%; height:100%; object-fit:cover; display:block}
+.pcell .ptag{position:absolute; left:4px; bottom:4px; font-size:.6rem; font-weight:800; padding:2px 6px; border-radius:99px;
+  background:rgba(28,18,30,.72); color:#fff; letter-spacing:.02em}
+.pcell.pending{display:grid; place-items:center; color:var(--dim); font-size:.68rem; font-weight:700}
+.pfull{width:100%; border-radius:12px; display:block; background:var(--mist); margin-bottom:14px}
+.pdrop{border:1.5px dashed var(--border); border-radius:var(--r); padding:22px 16px; text-align:center; color:var(--dim)}
+
+/* before & after */
+.shoot{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px}
+.shoot button{min-height:84px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  font-weight:700; font-size:.95rem; color:#fff; border:none}
+.shoot button svg{width:26px; height:26px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.shoot .sb{background:linear-gradient(135deg, #3b3346, #5b5166)}
+.shoot .sa{background:linear-gradient(135deg, var(--g1, var(--plum)), var(--g2, var(--brass)))}
+.shoot small{font-size:.7rem; font-weight:600; opacity:.9}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:3px; border-radius:14px; overflow:hidden; background:var(--border);
+  border:1px solid var(--border); width:100%; padding:0; position:relative}
+.pair img{width:100%; aspect-ratio:4/5; object-fit:cover; display:block; background:var(--mist)}
+.pair .pl{position:absolute; bottom:8px; font-size:.64rem; font-weight:800; padding:3px 8px; border-radius:99px; color:#fff; background:rgba(20,12,22,.72)}
+.pair .pl.a{left:calc(50% + 8px); background:var(--plum)}
+.pair .pl.b{left:8px}
+.pairmeta{display:flex; justify-content:space-between; gap:8px; font-size:.78rem; margin:6px 2px 14px}
+.pairmeta b{font-weight:700}
+.missing{display:grid; place-items:center; aspect-ratio:4/5; background:var(--mist); color:var(--dim); font-size:.72rem; font-weight:700; text-align:center; padding:8px}
+.cmp{position:relative; width:100%; aspect-ratio:4/5; border-radius:14px; overflow:hidden; background:var(--mist);
+  touch-action:none; user-select:none; -webkit-user-select:none; cursor:ew-resize}
+.cmp img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none}
+.cmp .cb{clip-path:inset(0 50% 0 0)}
+.cmp .ch{position:absolute; top:0; bottom:0; left:50%; width:3px; margin-left:-1.5px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.cmp .ch::after{content:""; position:absolute; top:50%; left:50%; width:38px; height:38px; margin:-19px 0 0 -19px; border-radius:99px;
+  background:#fff; box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.cmp .ch i{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; font-style:normal; font-size:.8rem; color:#333; font-weight:800; letter-spacing:-1px}
+.cmp .lb{position:absolute; top:10px; font-size:.68rem; font-weight:800; padding:4px 9px; border-radius:99px; color:#fff; background:rgba(20,12,22,.72)}
+.cmp .lb.l{left:10px} .cmp .lb.r{right:10px; background:var(--plum)}
+.pcell.pending{display:grid; place-items:center; color:var(--dim); font-size:.68rem; font-weight:700; animation:pulse 1.4s ease-in-out infinite}
+
+/* misc */
+.badge{background:var(--rose); color:#fff; border-radius:99px; font-size:.64rem; font-weight:800; padding:1px 6px; min-width:17px; text-align:center}
+.warnbar{background:color-mix(in srgb,var(--amber) 14%,transparent); border:1px solid color-mix(in srgb,var(--amber) 35%,transparent);
+  color:var(--text); border-radius:var(--r); padding:11px 13px; font-size:.85rem}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--border); overflow-x:auto; margin-bottom:14px; scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{padding:10px 12px; font-size:.87rem; font-weight:600; color:var(--dim); border-bottom:2.5px solid transparent; white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--plum); border-bottom-color:var(--plum)}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:.9rem}
+.kv dt{color:var(--dim); font-weight:600}
+.kv dd{margin:0; text-align:right; font-weight:600; overflow-wrap:anywhere}
+.note{border-left:3px solid var(--brass); padding:9px 0 9px 11px; margin-bottom:12px}
+.note .meta{font-size:.72rem; color:var(--dim); font-weight:700; margin-bottom:3px}
+.note p{white-space:pre-wrap; font-size:.9rem}
+.scrollx{overflow-x:auto; -webkit-overflow-scrolling:touch}
+.sk{background:var(--mist); border-radius:8px; height:14px; animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* desktop */
+@media (min-width:860px){
+  .tabbar{display:none}
+  .main{padding-bottom:28px}
+  .side{
+    display:flex; flex-direction:column; width:228px; flex:none; background:var(--surface);
+    border-right:1px solid var(--border); position:sticky; top:0; height:100vh; padding:18px 12px 12px; gap:3px;
+  }
+  .side .brand{display:flex; align-items:center; gap:10px; padding:0 8px 18px}
+  .side .brand .nm{font-family:Fraunces,serif; font-weight:600; font-size:1.02rem; line-height:1.15}
+  .side nav{display:flex; flex-direction:column; gap:2px; overflow:auto}
+  .side nav button{display:flex; align-items:center; gap:11px; padding:10px 11px; border-radius:10px; font-size:.92rem; font-weight:600; color:var(--dim); text-align:left}
+  .side nav button svg{width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none}
+  .side nav button:hover{background:var(--mist); color:var(--text)}
+  .side nav button[aria-current="page"]{background:color-mix(in srgb, var(--plum) 12%, transparent); color:var(--plum)}
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .quick{grid-template-columns:repeat(3,1fr); max-width:520px}
+  .cols{display:grid; grid-template-columns:1.35fr 1fr; gap:18px; align-items:start}
+  .sheet{left:50%; right:auto; bottom:auto; top:50%; width:min(620px,94vw); max-height:88vh;
+    border-radius:18px; transform:translate(-50%,-44%) scale(.97); opacity:0; transition:all .18s ease}
+  .sheet.on{transform:translate(-50%,-50%) scale(1); opacity:1}
+  .grab{display:none}
+  .wrap{padding:0 26px}
+  .topbar-in{padding:14px 26px}
+  .gc-body{max-height:70vh}
+  .toast{bottom:28px}
+}
+@media (min-width:1100px){ .stats{grid-template-columns:repeat(4,1fr)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brandmark" id="brandmark">C</div>
+      <div class="nm" id="brandname">Chair &amp; Comb</div>
+    </div>
+    <nav id="sidenav"></nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="brandmark" id="mbrand">C</div>
+        <h1 id="pagetitle">Today</h1>
+        <button class="iconbtn plain" id="themebtn" aria-label="Switch theme">
+          <svg viewBox="0 0 24 24"><path d="M12 3v1.5M12 19.5V21M4.2 4.2l1.1 1.1M18.7 18.7l1.1 1.1M3 12h1.5M19.5 12H21M4.2 19.8l1.1-1.1M18.7 5.3l1.1-1.1"/><circle cx="12" cy="12" r="4"/></svg>
+        </button>
+      </div>
+    </header>
+    <main class="wrap" id="view" role="main"></main>
+  </div>
+</div>
+
+<nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle">
+  <div class="grab"></div>
+  <div class="sheet-head">
+    <h2 id="sheettitle">&nbsp;</h2>
+    <button class="iconbtn plain" id="sheetclose" aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="sheetbody"></div>
+  <div class="sheet-foot" id="sheetfoot"></div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+/* ============================================================
+   Chair & Comb — salon manager
+   Core: icons, helpers, state, persistence
+   ============================================================ */
+
+const I = {
+  home:'<path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  users:'<path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><circle cx="9.5" cy="7.5" r="3.5"/><path d="M21 20v-1.5a4 4 0 0 0-3-3.87M16.5 4.2a3.5 3.5 0 0 1 0 6.6"/>',
+  scissors:'<circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8.2 7.9L20 18M20 6L8.2 16.1"/>',
+  box:'<path d="M21 8.5v7.6a1.6 1.6 0 0 1-.9 1.4l-7.3 3.4a1.6 1.6 0 0 1-1.6 0l-7.3-3.4a1.6 1.6 0 0 1-.9-1.4V8.5"/><path d="M3.4 7.6l7.8-3.5a1.6 1.6 0 0 1 1.6 0l7.8 3.5-8.6 4z"/><path d="M12 11.6V21"/>',
+  cash:'<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10v4M18 10v4"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7h-.3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1A2 2 0 1 1 7.2 3.9l.1.1a1.6 1.6 0 0 0 2.7-1.1V2.6a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.3 1.1z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  userplus:'<path d="M15 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="8.5" cy="7.5" r="3.5"/><path d="M18 7v6M21 10h-6"/>',
+  calplus:'<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  chev:'<path d="M9 5l7 7-7 7"/>',
+  left:'<path d="M15 5l-7 7 7 7"/>',
+  right:'<path d="M9 5l7 7-7 7"/>',
+  phone:'<path d="M5 3h3.5l1.8 4.4-2.2 1.3a12 12 0 0 0 5.2 5.2l1.3-2.2L19 13.5V17a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 5.2 2 2 0 0 1 5 3z"/>',
+  mail:'<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/>',
+  bell:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9z"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.2a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8L18.5 7M9 7V4.8A1.8 1.8 0 0 1 10.8 3h2.4A1.8 1.8 0 0 1 15 4.8V7"/>',
+  edit:'<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 5.5l4 4"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  send:'<path d="M20.5 3.5L10.5 13.5M20.5 3.5l-6.4 17-3.6-7-7-3.6z"/>',
+  warn:'<path d="M12 4.5L2.8 20h18.4z"/><path d="M12 10v4M12 17v.01"/>',
+  dl:'<path d="M12 3v12M7.5 11l4.5 4.5 4.5-4.5M4 20h16"/>',
+  camera:'<path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.6"/>',
+};
+const svg = (k, cls) => '<svg viewBox="0 0 24 24" class="'+(cls||'')+'">'+I[k]+'</svg>';
+
+/* ---------- tiny helpers ---------- */
+const $  = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
+
+const pad2 = n => String(n).padStart(2,'0');
+const iso = d => d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const fromISO = s => { const [y,m,d] = String(s).split('-').map(Number); return new Date(y, m-1, d); };
+const todayISO = () => iso(new Date());
+const addDays = (s, n) => { const d = fromISO(s); d.setDate(d.getDate()+n); return iso(d); };
+const dowOf = s => fromISO(s).getDay();
+const nowMins = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
+const whenTS = (dateISO, mins) => { const d = fromISO(dateISO); d.setMinutes(mins); return d.getTime(); };
+
+const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function fmtTime(m){
+  m = ((Math.round(m)%1440)+1440)%1440;
+  const h = Math.floor(m/60), mm = m%60;
+  const ap = h<12 ? 'am':'pm'; const h12 = h%12===0 ? 12 : h%12;
+  return h12 + (mm ? ':'+pad2(mm) : '') + ap;
+}
+function fmtDate(s, style){
+  const d = fromISO(s), t = todayISO();
+  if (style==='rel'){
+    if (s===t) return 'Today';
+    if (s===addDays(t,1)) return 'Tomorrow';
+    if (s===addDays(t,-1)) return 'Yesterday';
+  }
+  if (style==='long') return DOW[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate();
+  if (style==='full') return DOW[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  return MON[d.getMonth()].slice(0,3)+' '+d.getDate()+(d.getFullYear()!==new Date().getFullYear()?', '+d.getFullYear():'');
+}
+function relDays(s){
+  const a = fromISO(s).getTime(), b = fromISO(todayISO()).getTime();
+  return Math.round((a-b)/86400000);
+}
+function spanText(n){
+  if (n < 21) return n + ' day' + (n===1?'':'s');
+  const w = Math.round(n/7);
+  if (w < 9) return w + ' weeks';
+  return Math.round(n/30.4) + ' months';
+}
+function agoText(s){
+  const n = -relDays(s);
+  if (n <= 0) return 'today';
+  if (n === 1) return 'yesterday';
+  return spanText(n) + ' ago';
+}
+function sinceText(s){
+  const n = -relDays(s);
+  return n <= 1 ? 'a day' : spanText(n);
+}
+function money(n){
+  const c = (S.settings && S.settings.currency) || '$';
+  const v = Math.round((Number(n)||0)*100)/100;
+  return c + v.toLocaleString(undefined,{minimumFractionDigits: v%1?2:0, maximumFractionDigits:2});
+}
+function initials(c){ return ((c.first||'?')[0] + (c.last||'')[0]||'').toUpperCase(); }
+function fullName(c){ return c ? ((c.first||'')+' '+(c.last||'')).trim() || 'Unnamed' : 'Unknown client'; }
+function telHref(p){ return 'tel:'+String(p||'').replace(/[^0-9+]/g,''); }
+function smsHref(p, body){ return 'sms:'+String(p||'').replace(/[^0-9+]/g,'')+(/(iPhone|iPad|Mac)/.test(navigator.userAgent)?'&':'?')+'body='+encodeURIComponent(body); }
+function mailHref(e, subj, body){ return 'mailto:'+encodeURIComponent(e||'')+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body); }
+
+/* ---------- state ---------- */
+const STATUSES = [
+  {id:'scheduled', label:'Scheduled'},
+  {id:'confirmed', label:'Confirmed'},
+  {id:'completed', label:'Completed'},
+  {id:'cancelled', label:'Cancelled'},
+  {id:'noshow',    label:'No-show'},
+];
+const statusLabel = s => (STATUSES.find(x=>x.id===s)||STATUSES[0]).label;
+
+const PAY_METHODS = ['Cash','Card','Venmo','Cash App','Zelle','Other'];
+
+function defaultSettings(){
+  const hours = {};
+  for (let d=0; d<7; d++) hours[d] = { open: d >= 1 && d <= 6, start: 9*60, end: 18*60, breakStart: 13*60, breakEnd: 14*60, breakOn: false };
+  return {
+    id:'business', currency:'$', theme:'auto', palette:'fuchsia',
+    biz:{ name:'Chair & Comb', stylist:'', phone:'', email:'', address:'', website:'', logo:'' },
+    hours, closures:[], slot:15, buffer:0,
+    notify:{ sms:true, email:true, confirm:true, night:true, r2:true, rebook:true, birthday:true, r2h:2 },
+    birthdayHour:9,
+    coupon:{ on:false, type:'percent', value:15, days:30, note:'' },
+    nightHour:19,
+    autoDefaults:{ nightBefore:true, rebookOn:true, rebookDays:60 },
+    followupWeeks:6,
+    tpl:{
+      confirm_sms:"Hi {first}! Your appointment with {stylist} is confirmed for {dateLong} at {time}. Service: {services}. See you soon!",
+      night_sms:"Hi {first}, see you tomorrow at {time} for {services}. Reply here if anything's changed. — {stylist}",
+      dayof_sms:"Hi {first}, a reminder about your appointment with {stylist} today at {time}. See you shortly!",
+      reschedule_sms:"Hi {first}, your appointment has been moved to {dateLong} at {time}. Service: {services}. Let me know if that doesn't work!",
+      cancel_sms:"Hi {first}, your appointment on {dateLong} at {time} has been cancelled. Text me any time to rebook.",
+      rebook_sms:"Hi {first}! It's been {since} since your last visit. I'd love to get you back in the chair — text me a day that works. — {stylist}",
+
+      confirm_email_subject:"Your appointment is confirmed",
+      confirm_email:"Hi {first},\n\nYour appointment with {stylist} is confirmed.\n\nDate: {dateFull}\nTime: {time}\nService: {services}\nDuration: {duration}\nTotal: {price}\nLocation: {address}\n\nSee you soon!\n{business}\n{phone}",
+
+      night_email_subject:"See you tomorrow at {time}",
+      night_email:"Hi {first},\n\nJust a note before tomorrow.\n\nDate: {dateFull}\nTime: {time}\nService: {services}\nLocation: {address}\n\nIf anything's changed, reply to this email or call {phone} and I'll move you.\n\nSee you then!\n{stylist}\n{business}",
+
+      dayof_email_subject:"Your appointment is today at {time}",
+      dayof_email:"Hi {first},\n\nA quick reminder that you're booked in today.\n\nTime: {time}\nService: {services}\nLocation: {address}\n\n{business}\n{phone}",
+
+      reschedule_email_subject:"Your appointment has moved",
+      reschedule_email:"Hi {first},\n\nYour appointment is now on {dateFull} at {time}.\n\nService: {services}\nLocation: {address}\n\nIf that doesn't work, reply to this email or call {phone}.\n\n{business}",
+
+      cancel_email_subject:"Your appointment has been cancelled",
+      cancel_email:"Hi {first},\n\nYour appointment on {dateFull} at {time} has been cancelled.\n\nTo rebook, just reply to this email or call {phone}.\n\n{business}",
+
+      birthday_sms:"Happy birthday, {first}! Hope it's a wonderful one. {couponShort} - {stylist}",
+      birthday_email_subject:"Happy birthday, {first}!",
+      birthday_email:"Hi {first},\n\nHappy birthday from everyone at {business}! \u{1F389} I hope the year ahead is a great one.\n\n{couponLine}\n\nSee you soon,\n{stylist}",
+
+      rebook_email_subject:"We'd love to see you again",
+      rebook_email:"Hi {first},\n\nIt's been {since} since your last visit. I'd love to get you back in the chair — reply with a day that works and I'll hold a spot.\n\n{stylist}\n{business}\n{phone}",
+    },
+    seeded:false
+  };
+}
+
+const S = { settings: defaultSettings(), customers:[], services:[], products:[], appts:[], notes:[], msgs:[], photos:[], coupons:[] };
+const COLS = ['customers','services','products','appts','notes','msgs'];
+const LS = 'chaircomb.v1.';
+
+/* ---------- persistence (this app's own server) ---------- */
+/* The browser copy is a cache, so the app opens instantly and still reads
+   when the salon wifi drops. The database is the truth. */
+function lsSave(kind){
+  try { localStorage.setItem(LS+kind, JSON.stringify(kind === 'settings' ? S.settings : S[kind])); } catch(e){}
+}
+function lsLoadAll(){
+  try {
+    const st = localStorage.getItem(LS+'settings');
+    if (st) S.settings = Object.assign(defaultSettings(), JSON.parse(st));
+    COLS.forEach(k => { const v = localStorage.getItem(LS+k); if (v) S[k] = JSON.parse(v) || []; });
+  } catch(e){}
+}
+
+let INTEGRATIONS = {email:false, sms:false, dryRun:false};
+let LASTRUN = null;
+let online = true;
+
+async function api(path, opts){
+  const res = await fetch(path, Object.assign({
+    headers:{'Content-Type':'application/json'}, credentials:'same-origin'
+  }, opts || {}));
+  if (res.status === 401){ window.location.href = '/login'; throw new Error('signed out'); }
+  if (!res.ok){
+    let m = '';
+    try { m = (await res.json()).error; } catch(e){}
+    throw new Error(m || ('The server said ' + res.status));
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+/* Writes go into an outbox so a dropped connection never loses an edit.
+   Everything is also mirrored to this browser, so the app still opens and
+   reads if the network is down mid-appointment. */
+const outbox = [];
+let flushing = false;
+function queueWrite(job){ outbox.push(job); flushOutbox(); }
+async function flushOutbox(){
+  if (flushing) return;
+  flushing = true;
+  while (outbox.length){
+    const j = outbox[0];
+    try {
+      if (j.op === 'set') await api('/api/records/'+j.kind, {method:'POST', body: JSON.stringify(j.obj)});
+      else if (j.op === 'del') await api('/api/records/'+j.kind+'/'+encodeURIComponent(j.id), {method:'DELETE'});
+      else await api('/api/settings', {method:'PUT', body: JSON.stringify(S.settings)});
+      outbox.shift();
+      if (j.kind === 'appts') refreshSoon();
+      if (!online){ online = true; toast('Back online — changes saved'); }
+    } catch(e){
+      if (String(e.message) === 'signed out'){ flushing = false; return; }
+      if (online){ online = false; toast('Offline — changes will save when you reconnect'); }
+      flushing = false;
+      setTimeout(flushOutbox, 5000);
+      return;
+    }
+  }
+  flushing = false;
+}
+let refreshTimer = null;
+function refreshSoon(){
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    if (outbox.length) return;            /* never overwrite an unsaved edit */
+    loadState().then(draw).catch(() => {});
+  }, 1500);
+}
+function persist(kind, obj){ lsSave(kind); queueWrite({op:'set', kind, obj: JSON.parse(JSON.stringify(obj))}); }
+function unpersist(kind, id){ lsSave(kind); queueWrite({op:'del', kind, id}); }
+
+async function loadState(){
+  const d = await api('/api/state');
+  const defs = defaultSettings();
+  const deviceTheme = S.settings.theme || 'auto';
+  S.settings = Object.assign({}, defs, d.settings);
+  S.settings.theme = deviceTheme;
+  S.settings.tpl    = Object.assign({}, defs.tpl, d.settings.tpl || {});
+  S.settings.notify = Object.assign({}, defs.notify, d.settings.notify || {});
+  S.settings.biz    = Object.assign({}, defs.biz, d.settings.biz || {});
+  if (!S.settings.hours || !Object.keys(S.settings.hours).length) S.settings.hours = defs.hours;
+  for (let i = 0; i < 7; i++)
+    if (!S.settings.hours[i]) S.settings.hours[i] = defs.hours[i];
+  COLS.forEach(k => { S[k] = d[k] || []; lsSave(k); });
+  S.photos = d.photos || [];
+  S.coupons = d.coupons || [];
+  S.settings.coupon = Object.assign({}, defs.coupon, d.settings.coupon || {});
+  INTEGRATIONS = d.integrations || INTEGRATIONS;
+  LASTRUN = d.lastRun || null;
+  lsSave('settings');
+}
+
+/* ---------- record helpers ---------- */
+function upsert(kind, obj){
+  if (!obj.id) obj.id = uid();
+  const arr = S[kind], i = arr.findIndex(x => x.id === obj.id);
+  if (i >= 0) arr[i] = obj; else arr.push(obj);
+  persist(kind, obj);
+  return obj;
+}
+function remove(kind, id){
+  S[kind] = S[kind].filter(x => x.id !== id);
+  unpersist(kind, id);
+}
+function saveSettings(){ lsSave('settings'); queueWrite({op:'settings'}); }
+
+/* per-client automation, falling back to the salon defaults */
+function custAuto(c){
+  const d = S.settings.autoDefaults || {};
+  const a = (c && c.auto) || {};
+  return {
+    nightBefore: a.nightBefore !== undefined ? !!a.nightBefore : d.nightBefore !== false,
+    rebookOn:    a.rebookOn    !== undefined ? !!a.rebookOn    : d.rebookOn !== false,
+    rebookDays:  Number(a.rebookDays || d.rebookDays || 60),
+    birthday:    a.birthday !== false
+  };
+}
+
+/* ---------- birthdays ----------
+   Stored as "1990-03-14", or "--03-14" when the client didn't give a year
+   (plenty don't, and it's not needed to say happy birthday). */
+function bdayParts(dob){
+  const m = String(dob || '').match(/^(\d{4}|-)-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return { y: m[1] === '-' ? '' : m[1], m: Number(m[2]), d: Number(m[3]) };
+}
+function bdayLabel(dob){
+  const b = bdayParts(dob);
+  return b ? MON[b.m-1] + ' ' + b.d : '';
+}
+/* the next date their birthday falls on, today included; Feb 29 -> Feb 28 off leap years */
+function nextBirthday(dob){
+  const b = bdayParts(dob); if (!b) return null;
+  const t = todayISO(), y0 = Number(t.slice(0,4));
+  for (const y of [y0, y0+1]){
+    const leap = (y%4===0 && y%100!==0) || y%400===0;
+    const d = (b.m === 2 && b.d === 29 && !leap) ? 28 : b.d;
+    const s = y + '-' + pad2(b.m) + '-' + pad2(d);
+    if (s >= t) return s;
+  }
+  return null;
+}
+function birthdaysSoon(days){
+  const end = addDays(todayISO(), days);
+  return S.customers.map(c => ({c, on: nextBirthday(c.dob)}))
+    .filter(x => x.on && x.on <= end)
+    .sort((a,b) => a.on.localeCompare(b.on));
+}
+
+/* ---------- coupons ---------- */
+function couponOff(cp){
+  const v = Number(cp.value), n = Number.isInteger(v) ? v : v.toFixed(2);
+  return cp.type === 'amount' ? money(v) + ' off' : n + '% off';
+}
+function liveCoupons(customerId, apptId){
+  const t = todayISO();
+  return (S.coupons || []).filter(cp => cp.customerId === customerId &&
+    ((!cp.redeemedAt && cp.expiresOn >= t) || (apptId && cp.apptId === apptId)));
+}
+
+const byId = (kind, id) => S[kind].find(x => x.id === id);
+const cust = id => byId('customers', id);
+const svc  = id => byId('services', id);
+
+/* ---------- derived appointment data ---------- */
+function apptServices(a){ return (a.serviceIds||[]).map(svc).filter(Boolean); }
+function apptDuration(a){
+  if (a.duration) return a.duration;
+  const d = apptServices(a).reduce((t,s) => t + (Number(s.duration)||0), 0);
+  return d || 60;
+}
+function apptServiceTotal(a){
+  if (a.priceOverride != null && a.priceOverride !== '') return Number(a.priceOverride)||0;
+  return apptServices(a).reduce((t,s) => t + (Number(s.price)||0), 0);
+}
+function apptProductTotal(a){ return (a.products||[]).reduce((t,p) => t + (Number(p.price)||0) * (Number(p.qty)||0), 0); }
+function apptTotal(a){
+  const p = a.payment || {};
+  return Math.max(0, apptServiceTotal(a) + apptProductTotal(a) - (Number(p.discount)||0) + (Number(p.tip)||0));
+}
+function apptEnd(a){ return a.start + apptDuration(a); }
+function serviceNames(a){ const n = apptServices(a).map(s => s.name); return n.length ? n.join(', ') : (a.title || 'Appointment'); }
+const ACTIVE = a => a.status !== 'cancelled';
+const COUNTED = a => a.status === 'completed';
+
+function apptsOn(dateISO){
+  return S.appts.filter(a => a.date === dateISO).sort((a,b) => a.start - b.start);
+}
+function upcomingAppts(limit){
+  const t = todayISO(), n = nowMins();
+  return S.appts
+    .filter(a => ACTIVE(a) && a.status !== 'completed' && (a.date > t || (a.date === t && apptEnd(a) >= n)))
+    .sort((a,b) => a.date.localeCompare(b.date) || a.start - b.start)
+    .slice(0, limit || 999);
+}
+function custAppts(cid){
+  return S.appts.filter(a => a.customerId === cid).sort((a,b) => b.date.localeCompare(a.date) || b.start - a.start);
+}
+function lastVisit(cid){
+  const t = todayISO();
+  const past = S.appts.filter(a => a.customerId === cid && a.status === 'completed' && a.date <= t)
+    .sort((a,b) => b.date.localeCompare(a.date));
+  return past[0] || null;
+}
+function nextVisit(cid){
+  const t = todayISO();
+  const fut = S.appts.filter(a => a.customerId === cid && ACTIVE(a) && a.status !== 'completed' && a.date >= t)
+    .sort((a,b) => a.date.localeCompare(b.date) || a.start - b.start);
+  return fut[0] || null;
+}
+function custSpend(cid){
+  return S.appts.filter(a => a.customerId === cid && COUNTED(a)).reduce((t,a) => t + apptTotal(a), 0);
+}
+function revenueBetween(fromISO_, toISO_){
+  return S.appts.filter(a => COUNTED(a) && a.date >= fromISO_ && a.date <= toISO_).reduce((t,a) => t + apptTotal(a), 0);
+}
+function weekStart(dateISO){ return addDays(dateISO, -dowOf(dateISO)); }
+
+/* business hours */
+function dayHours(dateISO){
+  const h = (S.settings.hours && S.settings.hours[dowOf(dateISO)]) || {};
+  const closed = (S.settings.closures||[]).some(c => dateISO >= c.from && dateISO <= (c.to || c.from));
+  return { open: !!h.open && !closed, start: h.start ?? 540, end: h.end ?? 1080, breakOn: !!h.breakOn, breakStart: h.breakStart ?? 780, breakEnd: h.breakEnd ?? 840, closedReason: closed ? 'Closed' : '' };
+}
+function conflictsFor(a){
+  return S.appts.filter(x => x.id !== a.id && x.date === a.date && ACTIVE(x) && x.status !== 'completed'
+    && a.start < apptEnd(x) && apptEnd(a) > x.start);
+}
+function freeSlots(dateISO, minutes){
+  const h = dayHours(dateISO);
+  if (!h.open) return [];
+  const step = Number(S.settings.slot) || 15;
+  const taken = apptsOn(dateISO).filter(ACTIVE).map(a => [a.start, apptEnd(a)]);
+  if (h.breakOn) taken.push([h.breakStart, h.breakEnd]);
+  const out = [];
+  const isToday = dateISO === todayISO(), n = nowMins();
+  for (let t = h.start; t + minutes <= h.end; t += step){
+    if (isToday && t < n) continue;
+    if (taken.some(([s,e]) => t < e && t + minutes > s)) continue;
+    out.push(t);
+  }
+  return out;
+}
+
+/* ---------- message templating ---------- */
+function tplVars(c, a, extra){
+  const st = S.settings, b = st.biz;
+  const v = {
+    first: c ? (c.first || fullName(c)) : 'there',
+    name: c ? fullName(c) : 'there',
+    stylist: b.stylist || b.name || 'your stylist',
+    business: b.name || '',
+    phone: b.phone || '',
+    address: b.address || '',
+    website: b.website || '',
+    date: a ? fmtDate(a.date) : '',
+    dateLong: a ? fmtDate(a.date,'long') : '',
+    dateFull: a ? fmtDate(a.date,'full') : '',
+    time: a ? fmtTime(a.start) : '',
+    services: a ? serviceNames(a) : '',
+    duration: a ? (apptDuration(a) + ' min') : '',
+    price: a ? money(apptServiceTotal(a)) : '',
+    since: c && lastVisit(c.id) ? sinceText(lastVisit(c.id).date) : 'a while',
+    coupon: '', code: '', expires: '', couponLine: '', couponShort: '',
+    when: ''
+  };
+  const cp = c && liveCoupons(c.id)[0];
+  if (cp){
+    v.coupon = couponOff(cp); v.code = cp.code; v.expires = fmtDate(cp.expiresOn, 'long');
+    v.couponLine = "As a little birthday gift, here's " + v.coupon + " your next visit \u2014 just mention code " + cp.code +
+      " when you book. It's good until " + v.expires + "." + (cp.note ? ' ' + cp.note : '');
+    v.couponShort = "Here's " + v.coupon + " your next visit - code " + cp.code + ", good until " + fmtDate(cp.expiresOn) + ".";
+  }
+  return Object.assign(v, extra||{});
+}
+/* optional pieces like {couponLine} can come out empty — close the gaps,
+   exactly as the server does before it sends */
+function tidyMsg(s){
+  return String(s || '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/ {2,}/g, ' ')
+    .replace(/ ([.,!])/g, '$1')
+    .trim();
+}
+function render(tpl, vars){
+  return String(tpl||'').replace(/\{(\w+)\}/g, (m,k) => (vars[k] != null ? vars[k] : m));
+}
+function logMessage(rec){
+  rec.id = uid(); rec.sentAt = Date.now();
+  upsert('msgs', rec);
+}
+function messageSent(apptId, kind){
+  return S.msgs.some(m => m.apptId === apptId && m.kind === kind);
+}
+function lastMessageAt(customerId, kind){
+  return S.msgs.filter(m => m.customerId === customerId && m.kind === kind)
+    .reduce((t,m) => Math.max(t, m.sentAt || 0), 0);
+}
+
+/* ---------- UI atoms ---------- */
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
+}
+function statusChip(s){
+  const cls = s === 'noshow' ? 'st-noshow' : 'st-' + s;
+  return '<span class="chip '+cls+'"><span class="dot"></span>'+statusLabel(s)+'</span>';
+}
+/* a steady colour per client, so Sarah is always the same pink */
+const AV_HUES = [330, 12, 32, 150, 172, 200, 222, 262, 288, 350];
+function avHue(c){
+  const k = ((c && (c.first || '')) + '|' + (c && (c.last || ''))).toLowerCase();
+  let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return AV_HUES[h % AV_HUES.length];
+}
+function avatar(c, size){
+  const cls = 'av' + (size ? ' ' + size : '');
+  if (c && c.photo) return '<span class="'+cls+'"><img src="'+esc(c.photo)+'" alt=""></span>';
+  return '<span class="'+cls+'" style="--avh:'+avHue(c)+'">'+esc(initials(c||{}))+'</span>';
+}
+
+/* ---------- colour schemes ----------
+   Every text colour here is checked against its background for WCAG AA
+   (4.5:1), in light and dark — vibrant, but still readable at the chair. */
+const PALETTES = {
+  fuchsia: { label:'Fuchsia', g:['#C81E63','#C2410C'],
+    light:{plum:'#C81E63', 'plum-soft':'#E0578F', brass:'#C2410C', 'brass-soft':'#FFE2D1', teal:'#0F766E', rose:'#64748B', amber:'#A16207',
+           chalk:'#FFF7FA', mist:'#FCE7F0', line:'#F5D0DF', ink:'#2A0F22', muted:'#7A5C6E'},
+    dark:{bg:'#1A0E17', surface:'#251320', border:'#40233A', mist:'#34192C', text:'#FCEFF5', dim:'#BC9CAE',
+          plum:'#FF6FA8', 'plum-soft':'#D94F87', brass:'#FF9D5C', 'brass-soft':'#4A2A18', teal:'#3DD6C6', rose:'#A7B0C0', amber:'#F5C04A'} },
+  violet: { label:'Violet', g:['#6D28D9','#BE185D'],
+    light:{plum:'#6D28D9', 'plum-soft':'#8B5CF6', brass:'#BE185D', 'brass-soft':'#FCE0EE', teal:'#047857', rose:'#B91C1C', amber:'#A16207',
+           chalk:'#F8F6FF', mist:'#EDE9FE', line:'#DDD6FE', ink:'#1E1037', muted:'#655A80'},
+    dark:{bg:'#120D22', surface:'#1B1430', border:'#33285A', mist:'#261D45', text:'#F3EFFF', dim:'#A89DC4',
+          plum:'#B79BFF', 'plum-soft':'#8B6CF0', brass:'#FF7EB6', 'brass-soft':'#4A1A33', teal:'#4ADE9E', rose:'#FF8A8A', amber:'#F5C04A'} },
+  lagoon: { label:'Lagoon', g:['#0F766E','#1D4ED8'],
+    light:{plum:'#0F766E', 'plum-soft':'#14A89B', brass:'#C2410C', 'brass-soft':'#FFE2D1', teal:'#1D4ED8', rose:'#BE123C', amber:'#A16207',
+           chalk:'#F1FAF8', mist:'#D9F3EE', line:'#BFE6DF', ink:'#0B2A27', muted:'#4B6A66'},
+    dark:{bg:'#0A1A18', surface:'#0F2522', border:'#1E3F3A', mist:'#15332E', text:'#E9FBF8', dim:'#8FB5AF',
+          plum:'#3DD6C6', 'plum-soft':'#23A99B', brass:'#FF9D5C', 'brass-soft':'#4A2A18', teal:'#7FB0FF', rose:'#FF8FA3', amber:'#F5C04A'} },
+  sunset: { label:'Sunset', g:['#D12F4B','#B45309'],
+    light:{plum:'#D12F4B', 'plum-soft':'#E8667B', brass:'#B45309', 'brass-soft':'#FFE9C7', teal:'#0E7490', rose:'#566175', amber:'#7C3AED',
+           chalk:'#FFF7F3', mist:'#FFE8DF', line:'#FBD3C5', ink:'#2B1210', muted:'#7A574F'},
+    dark:{bg:'#1C0F0D', surface:'#281614', border:'#462925', mist:'#381F1B', text:'#FFF1EC', dim:'#C09C93',
+          plum:'#FF7A8C', 'plum-soft':'#E0566B', brass:'#FFB24A', 'brass-soft':'#4A3312', teal:'#4FD1E8', rose:'#A7B0C0', amber:'#C4A5FF'} },
+  plum: { label:'Plum', g:['#5B2F52','#8E3B6E'],
+    light:{plum:'#5B2F52', 'plum-soft':'#7E4A73', brass:'#8A6320', 'brass-soft':'#F1E3C4', teal:'#2F6F62', rose:'#A8525C', amber:'#94580F',
+           chalk:'#FBF7F6', mist:'#EFE5E9', line:'#E2D4DA', ink:'#241A28', muted:'#7B6C77'},
+    dark:{bg:'#191320', surface:'#221A29', border:'#38293C', mist:'#2C2133', text:'#F4ECF1', dim:'#A798A6',
+          plum:'#C79BBC', 'plum-soft':'#A9769E', brass:'#D9AE61', 'brass-soft':'#4A3A1E', teal:'#67B29F', rose:'#D98A93', amber:'#DBA365'} },
+};
+function applyPalette(name){
+  const p = PALETTES[name] || PALETTES.fuchsia;
+  const decl = o => Object.entries(o).map(([k,v]) => '--'+k+':'+v).join(';');
+  const grad = '--g1:'+p.g[0]+';--g2:'+p.g[1];
+  const css =
+    ':root{'+decl(p.light)+';'+grad+'}'+
+    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){'+decl(p.dark)+';'+grad+'}}'+
+    ':root[data-theme="dark"]{'+decl(p.dark)+';'+grad+'}';
+  let tag = document.getElementById('palette');
+  if (!tag){ tag = document.createElement('style'); tag.id = 'palette'; document.head.appendChild(tag); }
+  tag.textContent = css;
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta){ meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+  meta.content = p.light.chalk;
+}
+applyPalette((function(){ try { return JSON.parse(localStorage.getItem('chaircomb.v1.settings')||'{}').palette; } catch(e){ return ''; } })());
+</script>
+<script>
+"use strict";
+/* ============================================================
+   Sheets, routing, navigation
+   ============================================================ */
+const sheetStack = [];
+
+function openSheet(cfg){ sheetStack.push(cfg); paintSheet(); }
+function replaceSheet(cfg){ sheetStack.pop(); sheetStack.push(cfg); paintSheet(); }
+function closeSheet(){ sheetStack.pop(); if (sheetStack.length) paintSheet(); else hideSheet(); }
+function closeAllSheets(){ sheetStack.length = 0; hideSheet(); }
+function hideSheet(){
+  $('#sheet').classList.remove('on'); $('#scrim').classList.remove('on');
+  setTimeout(() => { if (!sheetStack.length) $('#sheetbody').innerHTML = ''; }, 220);
+}
+function paintSheet(){
+  const cfg = sheetStack[sheetStack.length-1];
+  $('#sheettitle').textContent = cfg.title || '';
+  $('#sheetbody').innerHTML = cfg.body || '';
+  $('#sheetfoot').innerHTML = cfg.foot || '';
+  $('#sheetfoot').style.display = cfg.foot ? '' : 'none';
+  $('#sheet').classList.add('on'); $('#scrim').classList.add('on');
+  $('#sheetbody').scrollTop = 0;
+  if (cfg.onMount) cfg.onMount($('#sheet'));
+}
+$('#scrim').addEventListener('click', closeAllSheets);
+$('#sheetclose').addEventListener('click', closeSheet);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetStack.length) closeSheet(); });
+
+function confirmSheet(title, msg, okLabel, onOk, danger){
+  openSheet({
+    title,
+    body: '<p class="small dim">'+esc(msg)+'</p>',
+    foot: '<button class="btn ghost" data-act="cancel">Keep it</button><button class="btn '+(danger?'danger':'primary')+'" data-act="ok">'+esc(okLabel)+'</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="ok"]', root).onclick = () => { closeSheet(); onOk(); };
+    }
+  });
+}
+
+/* ---------- routing ---------- */
+const NAV = [
+  {id:'dashboard', label:'Today',    icon:'home'},
+  {id:'calendar',  label:'Calendar', icon:'cal'},
+  {id:'customers', label:'Clients',  icon:'users'},
+  {id:'services',  label:'Services', icon:'scissors'},
+  {id:'products',  label:'Products', icon:'box'},
+  {id:'payments',  label:'Payments', icon:'cash'},
+  {id:'reports',   label:'Reports',  icon:'chart'},
+  {id:'settings',  label:'Settings', icon:'gear'},
+];
+const TABS = ['dashboard','calendar','customers','payments','more'];
+
+let route = 'dashboard', routeParam = null;
+let calMode = 'day', calDate = todayISO();
+let custQuery = '', custSort = 'name';
+
+function go(r, param){
+  route = r; routeParam = param || null;
+  closeAllSheets();
+  draw();
+  window.scrollTo(0,0);
+}
+
+function drawNav(){
+  $('#sidenav').innerHTML = NAV.map(n =>
+    '<button data-go="'+n.id+'"'+(route===n.id?' aria-current="page"':'')+'>'+svg(n.icon)+'<span>'+n.label+'</span></button>'
+  ).join('');
+  $('#tabbar').innerHTML = TABS.map(t => {
+    if (t === 'more') return '<button data-more="1"'+(['services','products','reports','settings'].includes(route)?' aria-current="page"':'')+'>'+
+      '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>';
+    const n = NAV.find(x => x.id === t);
+    return '<button data-go="'+n.id+'"'+(route===n.id?' aria-current="page"':'')+'>'+svg(n.icon)+'<span>'+n.label+'</span></button>';
+  }).join('');
+}
+
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (g){ go(g.dataset.go); return; }
+  if (e.target.closest('[data-more]')) openMore();
+});
+
+function openMore(){
+  openSheet({
+    title:'More',
+    body:'<div class="list">' + ['services','products','reports','settings'].map(id => {
+      const n = NAV.find(x => x.id === id);
+      return '<button class="item" data-go="'+id+'">'+svg(n.icon,'')+
+        '<span class="grow nm">'+n.label+'</span>'+svg('chev')+'</button>';
+    }).join('') + '</div>',
+    onMount(root){
+      $$('.item svg', root).forEach(s => { s.style.width='20px'; s.style.height='20px'; s.style.stroke='var(--plum)'; s.style.fill='none'; s.style.strokeWidth='1.8'; });
+      $$('[data-go]', root).forEach(b => b.addEventListener('click', closeAllSheets));
+    }
+  });
+}
+
+/* ---------- main draw ---------- */
+function draw(){
+  drawNav();
+  const v = $('#view');
+  const titles = {dashboard:'Today', calendar:'Calendar', customers:'Clients', services:'Services',
+    products:'Products', payments:'Payments', reports:'Reports', settings:'Settings', customer:'Client'};
+  $('#pagetitle').textContent = titles[route] || '';
+  if (route === 'dashboard') v.innerHTML = viewDashboard();
+  else if (route === 'calendar') v.innerHTML = viewCalendar();
+  else if (route === 'customers') v.innerHTML = viewCustomers();
+  else if (route === 'customer') v.innerHTML = viewCustomer(routeParam);
+  else if (route === 'services') v.innerHTML = viewServices();
+  else if (route === 'products') v.innerHTML = viewProducts();
+  else if (route === 'payments') v.innerHTML = viewPayments();
+  else if (route === 'reports') v.innerHTML = viewReports();
+  else if (route === 'settings') v.innerHTML = viewSettings();
+  wireView();
+}
+
+/* ============================================================
+   Dashboard
+   ============================================================ */
+function nightTs(a){
+  const d = fromISO(a.date);
+  d.setDate(d.getDate()-1);
+  d.setHours(Number(S.settings.nightHour ?? 19), 0, 0, 0);
+  return d.getTime();
+}
+function dueReminders(){
+  const out = [], now = Date.now(), n = S.settings.notify;
+
+  /* per-appointment: confirmation, the night-before email, the short-notice text */
+  upcomingAppts().forEach(a => {
+    const c = cust(a.customerId);
+    if (!c || (!c.phone && !c.email)) return;
+    const auto = custAuto(c);
+    const ts = whenTS(a.date, a.start);
+    if (n.confirm && !messageSent(a.id, 'confirm'))
+      out.push({a, c, kind:'confirm', channel: c.email ? 'email' : 'sms', label:'Confirmation not sent', at: ts});
+    if (n.night && auto.nightBefore && c.email && !messageSent(a.id, 'night') && now >= nightTs(a))
+      out.push({a, c, kind:'night', channel:'email', label:'Night-before email due', at: nightTs(a)});
+    if (n.r2 && c.phone && !messageSent(a.id, 'r2') && now >= ts - (n.r2h||2)*3600000)
+      out.push({a, c, kind:'r2', channel:'sms', label:(n.r2h||2)+'-hour text due', at: ts});
+  });
+
+  /* per-client: the rebooking email, every N days until they book again */
+  if (n.rebook) S.customers.forEach(c => {
+    if (!c.email) return;
+    const auto = custAuto(c);
+    if (!auto.rebookOn) return;
+    if (nextVisit(c.id)) return;
+    const lv = lastVisit(c.id);
+    if (!lv) return;
+    const base = Math.max(whenTS(lv.date, 12*60), lastMessageAt(c.id, 'rebook'));
+    const due = base + auto.rebookDays*86400000;
+    if (now >= due)
+      out.push({a:null, c, kind:'rebook', channel:'email',
+        label:'Rebooking email due · '+auto.rebookDays+'-day check-in', at: due});
+  });
+
+  return out.sort((x,y) => x.at - y.at);
+}
+function followUpList(){
+  const weeks = Number(S.settings.followupWeeks) || 6;
+  const cutoff = addDays(todayISO(), -weeks*7);
+  return S.customers.filter(c => {
+    if (nextVisit(c.id)) return false;
+    if (c.email && custAuto(c).rebookOn && S.settings.notify.rebook) return false; /* already queued */
+    const lv = lastVisit(c.id);
+    return lv && lv.date <= cutoff;
+  }).sort((a,b) => (lastVisit(a.id).date).localeCompare(lastVisit(b.id).date));
+}
+function lowStock(){ return S.products.filter(p => Number(p.qty) <= Number(p.minQty || 0)); }
+
+function viewDashboard(){
+  const t = todayISO();
+  const today = apptsOn(t);
+  const active = today.filter(ACTIVE);
+  const ws = weekStart(t);
+  const dueR = dueReminders(), fu = followUpList(), low = lowStock();
+  const next = upcomingAppts(1)[0];
+  const h = dayHours(t);
+
+  let s = '<div class="hero">';
+  s += '<p class="hd">'+fmtDate(t,'full')+'</p>';
+  s += '<h1>'+(active.length
+        ? active.length+' appointment'+(active.length>1?'s':'')+' today'
+        : (h.open ? 'No appointments yet' : 'Closed today'))+'</h1>';
+  if (next) s += '<p class="hn">Next up: <b>'+esc(fullName(cust(next.customerId)))+'</b> — '+
+    (next.date === t ? '' : fmtDate(next.date,'rel')+' ')+'at '+fmtTime(next.start)+'</p>';
+  s += '</div>';
+
+  s += '<div class="quick" style="margin:14px 0 18px">'+
+    '<button data-new="appt"><span class="qi" style="--qc:var(--plum)">'+svg('calplus')+'</span>New appointment</button>'+
+    '<button data-new="cust"><span class="qi" style="--qc:var(--teal)">'+svg('userplus')+'</span>Add client</button>'+
+    '<button data-new="svc"><span class="qi" style="--qc:var(--brass)">'+svg('scissors')+'</span>Add service</button></div>';
+
+  s += '<div class="stats">'+
+    stat('Today', money(revenueBetween(t,t)), true, 'var(--brass)')+
+    stat('This week', money(revenueBetween(ws, addDays(ws,6))), true, 'var(--brass)')+
+    stat('Clients', S.customers.length, false, 'var(--plum)')+
+    stat('Upcoming', upcomingAppts().length, false, 'var(--teal)')+
+  '</div>';
+
+  s += '<div class="cols" style="margin-top:22px">';
+
+  /* left column */
+  s += '<div>';
+  s += '<div class="sec-head"><h2>Today\'s schedule</h2>'+
+       '<button class="btn sm ghost" data-goday="'+t+'">Open calendar</button></div>';
+  if (!today.length){
+    s += '<div class="card empty"><h3>'+(h.open ? 'The chair is free' : 'You\'re closed today')+'</h3>'+
+         '<p class="small">'+(h.open ? 'Book someone in and it will show up here.' : 'Change your hours in Settings if that\'s wrong.')+'</p>'+
+         '<button class="btn primary" data-new="appt">'+svg('plus')+'New appointment</button></div>';
+  } else {
+    s += '<div class="tl">'+today.map(a => {
+      const c = cust(a.customerId);
+      return '<div class="slot"><span class="time">'+fmtTime(a.start)+'</span>'+
+        '<button class="blk s-'+a.status+'" data-appt="'+a.id+'">'+
+          '<div class="row"><div class="grow"><div style="font-weight:700">'+esc(fullName(c))+'</div>'+
+          '<div class="small dim trunc">'+esc(serviceNames(a))+'</div></div>'+
+          '<div style="text-align:right"><div class="num" style="font-size:.95rem">'+money(apptServiceTotal(a))+'</div>'+
+          '<div class="tiny dim">'+apptDuration(a)+' min</div></div></div>'+
+          '<div class="row-tight" style="margin-top:8px">'+statusChip(a.status)+
+          (c && c.phone ? '<span class="tiny dim">'+esc(c.phone)+'</span>' : '')+'</div>'+
+        '</button></div>';
+    }).join('')+'</div>';
+  }
+  s += '</div>';
+
+  /* right column */
+  s += '<div class="stack" style="gap:18px">';
+
+  const recent = S.msgs.slice().sort((a,b) => (b.sentAt||0) - (a.sentAt||0));
+  const failed = recent.filter(m => m.status === 'failed');
+  s += '<div><div class="sec-head"><h2>Messages</h2>'+(failed.length?'<span class="badge">'+failed.length+'</span>':'')+'</div>';
+  if (failed.length){
+    s += '<div class="warnbar" style="margin-bottom:10px">'+failed.length+' message'+(failed.length>1?'s':'')+' didn\'t go out.</div>';
+    s += '<div class="card list" style="margin-bottom:12px">'+failed.slice(0,4).map(m => {
+      const c = cust(m.customerId);
+      return '<button class="item" data-retry="'+m.id+'">'+avatar(c,'sm')+
+        '<span class="grow"><span class="nm small">'+esc(fullName(c))+'</span>'+
+        '<span class="tiny" style="display:block;color:var(--rose)">'+esc(m.error || 'Failed')+'</span></span>'+
+        svg('send')+'</button>';
+    }).join('')+'</div>';
+  }
+  if (!recent.length){
+    s += '<div class="card pad small dim">Confirmations, night-before emails and rebooking nudges go out on their own. Anything sent will show up here.</div>';
+  } else {
+    s += '<div class="card list">'+recent.slice(0,5).map(m => {
+      const c = cust(m.customerId);
+      const kinds = {confirm:'Confirmation', night:'Night-before', dayof:'Day-of text', rebook:'Rebooking nudge', reschedule:'Moved', cancel:'Cancelled', birthday:'Birthday wishes', manual:'Written by you'};
+      return '<div class="item">'+avatar(c,'sm')+
+        '<span class="grow"><span class="nm small">'+esc(fullName(c))+'</span>'+
+        '<span class="tiny dim" style="display:block">'+esc(kinds[m.kind] || m.kind)+' · '+
+          (m.channel === 'email' ? 'email' : 'text')+' · '+timeAgo(m.sentAt)+'</span></span>'+
+        (m.status === 'sent' ? svg('check') : svg('warn'))+'</div>';
+    }).join('')+'</div>';
+  }
+  s += '<p class="tiny dim" style="margin-top:8px">'+automationLine()+'</p>';
+  s += '</div>';
+
+  s += '<div><div class="sec-head"><h2>Reach out by hand</h2>'+
+       '<button class="btn sm ghost" data-go="customers">All clients</button></div>';
+  if (!fu.length) s += '<div class="card pad small dim">Nobody left over — everyone overdue is either booked or in the queue above.</div>';
+  else s += '<div class="card list">'+fu.slice(0,5).map(c => {
+      const lv = lastVisit(c.id);
+      return '<button class="item" data-followup="'+c.id+'">'+avatar(c,'sm')+
+        '<span class="grow"><span class="nm small">'+esc(fullName(c))+'</span>'+
+        '<span class="tiny dim" style="display:block">Last in '+agoText(lv.date)+'</span></span>'+svg('send')+'</button>';
+    }).join('')+'</div>';
+  s += '</div>';
+
+  const bdays = birthdaysSoon(7);
+  if (bdays.length){
+    s += '<div><div class="sec-head"><h2>Birthdays this week</h2></div><div class="card list">'+
+      bdays.slice(0,6).map(x => {
+        const today = x.on === t;
+        const sent = today && S.msgs.some(m => m.customerId === x.c.id && m.kind === 'birthday' && m.sentAt && iso(new Date(m.sentAt)) === t);
+        const on = custAuto(x.c).birthday && S.settings.notify.birthday && (x.c.email || x.c.phone);
+        return '<button class="item" data-cust="'+x.c.id+'">'+avatar(x.c,'sm')+
+          '<span class="grow"><span class="nm small">'+esc(fullName(x.c))+(today ? ' \u{1F382}' : '')+'</span>'+
+          '<span class="tiny dim" style="display:block">'+(today ? 'Today' : fmtDate(x.on,'rel') === 'Tomorrow' ? 'Tomorrow' : DOW[dowOf(x.on)])+
+            ' · '+(sent ? 'wishes sent' : !on ? 'no automatic message' : today ? 'goes out at '+fmtTime((S.settings.birthdayHour??9)*60) : 'wishes will go out')+'</span></span>'+
+          svg('chev')+'</button>';
+      }).join('')+'</div></div>';
+  }
+
+  if (low.length){
+    s += '<div><div class="sec-head"><h2>Running low</h2></div><div class="card list">'+
+      low.slice(0,5).map(p => '<button class="item" data-prod="'+p.id+'">'+svg('warn','')+
+        '<span class="grow"><span class="nm small">'+esc(p.name)+'</span>'+
+        '<span class="tiny dim" style="display:block">'+esc(p.brand||'')+'</span></span>'+
+        '<span class="num">'+(p.qty||0)+'</span></button>').join('')+'</div></div>';
+  }
+
+  s += '</div></div>';
+  return s;
+}
+function timeAgo(ts){
+  if (!ts) return 'just now';
+  const m = Math.round((Date.now() - ts)/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m+' min ago';
+  const h = Math.round(m/60);
+  if (h < 24) return h+' hour'+(h===1?'':'s')+' ago';
+  const d = Math.round(h/24);
+  return d+' day'+(d===1?'':'s')+' ago';
+}
+function automationLine(){
+  if (!INTEGRATIONS.email && !INTEGRATIONS.sms && !INTEGRATIONS.dryRun)
+    return 'Nothing can be sent yet — add your Resend and Twilio keys to the server.';
+  const bits = [];
+  if (INTEGRATIONS.email) bits.push('Email on');
+  if (INTEGRATIONS.sms) bits.push('Texts on');
+  if (INTEGRATIONS.dryRun) bits.push('Test mode — nothing actually leaves');
+  if (LASTRUN) bits.push('last checked '+timeAgo(LASTRUN.at));
+  return bits.join(' · ');
+}
+function stat(k, v, money_, color){
+  return '<div class="stat"'+(color ? ' style="--sc:'+color+'"' : '')+'><div class="k">'+esc(k)+'</div>'+
+    '<div class="v num'+(money_?' money':'')+'">'+v+'</div></div>';
+}
+
+/* ============================================================
+   Calendar
+   ============================================================ */
+const HOUR_PX = 56;
+
+function viewCalendar(){
+  let s = '<div style="padding:14px 0 0">';
+  s += '<div class="seg" style="margin-bottom:14px">'+['day','week','month'].map(m =>
+      '<button data-calmode="'+m+'" aria-pressed="'+(calMode===m)+'">'+m[0].toUpperCase()+m.slice(1)+'</button>').join('')+'</div>';
+
+  s += '<div class="cal-head">'+
+    '<button class="iconbtn" data-calnav="-1" aria-label="Previous">'+svg('left')+'</button>'+
+    '<span class="t">'+calTitle()+'</span>'+
+    '<button class="btn sm ghost" data-calnav="0">Today</button>'+
+    '<button class="iconbtn" data-calnav="1" aria-label="Next">'+svg('right')+'</button>'+
+    '<button class="iconbtn" data-new="appt" aria-label="New appointment" style="background:var(--plum);color:#fff">'+svg('plus')+'</button>'+
+  '</div>';
+
+  if (calMode === 'month') s += monthGrid();
+  else s += timeGrid(calMode === 'day' ? [calDate] : weekDates());
+  s += '<p class="tiny dim center" style="margin-top:10px">'+(calMode==='month'
+      ? 'Tap a day to open it.' : 'Tap an appointment to open it. Drag it to a new time.')+'</p>';
+  s += '</div>';
+  return s;
+}
+function weekDates(){ const ws = weekStart(calDate); return Array.from({length:7}, (_,i) => addDays(ws,i)); }
+function calTitle(){
+  if (calMode === 'day') return fmtDate(calDate,'long');
+  if (calMode === 'month'){ const d = fromISO(calDate); return MON[d.getMonth()]+' '+d.getFullYear(); }
+  const w = weekDates(), a = fromISO(w[0]), b = fromISO(w[6]);
+  return MON[a.getMonth()].slice(0,3)+' '+a.getDate()+' – '+(a.getMonth()!==b.getMonth() ? MON[b.getMonth()].slice(0,3)+' ' : '')+b.getDate();
+}
+
+function monthGrid(){
+  const d = fromISO(calDate), y = d.getFullYear(), m = d.getMonth();
+  const first = new Date(y, m, 1), startPad = first.getDay();
+  const days = new Date(y, m+1, 0).getDate();
+  const t = todayISO();
+  let cells = [];
+  for (let i = 0; i < startPad; i++){ const dd = new Date(y, m, -(startPad-1-i)); cells.push({iso:iso(dd), off:true}); }
+  for (let i = 1; i <= days; i++) cells.push({iso:iso(new Date(y,m,i)), off:false});
+  while (cells.length % 7) { const last = fromISO(cells[cells.length-1].iso); last.setDate(last.getDate()+1); cells.push({iso:iso(last), off:true}); }
+
+  let s = '<div class="month">'+['S','M','T','W','T','F','S'].map(x => '<div class="dow">'+x+'</div>').join('');
+  cells.forEach(c => {
+    const list = apptsOn(c.iso).filter(ACTIVE);
+    const cls = ['day']; if (c.off) cls.push('off'); if (c.iso === t) cls.push('today'); if (c.iso === calDate) cls.push('sel');
+    s += '<button class="'+cls.join(' ')+'" data-calday="'+c.iso+'">'+fromISO(c.iso).getDate()+
+      '<span class="dots">'+list.slice(0,4).map(() => '<i></i>').join('')+'</span></button>';
+  });
+  s += '</div>';
+  const list = apptsOn(calDate);
+  s += '<div class="sec"><div class="sec-head"><h2>'+fmtDate(calDate,'long')+'</h2></div>';
+  s += list.length ? '<div class="card list">'+list.map(apptRow).join('')+'</div>'
+    : '<div class="card empty"><p class="small">Nothing booked.</p><button class="btn primary" data-new="appt" data-date="'+calDate+'">'+svg('plus')+'Book this day</button></div>';
+  s += '</div>';
+  return s;
+}
+function apptRow(a){
+  const c = cust(a.customerId);
+  return '<button class="item" data-appt="'+a.id+'">'+
+    '<span style="width:58px;flex:none" class="small num">'+fmtTime(a.start)+'</span>'+
+    '<span class="grow"><span class="nm">'+esc(fullName(c))+'</span>'+
+    '<span class="tiny dim trunc" style="display:block">'+esc(serviceNames(a))+'</span></span>'+
+    statusChip(a.status)+'</button>';
+}
+
+function timeGrid(dates){
+  let lo = 24*60, hi = 0;
+  dates.forEach(d => {
+    const h = dayHours(d);
+    if (h.open){ lo = Math.min(lo, h.start); hi = Math.max(hi, h.end); }
+    apptsOn(d).forEach(a => { lo = Math.min(lo, a.start); hi = Math.max(hi, apptEnd(a)); });
+  });
+  if (hi <= lo){ lo = 9*60; hi = 18*60; }
+  lo = Math.floor(lo/60)*60; hi = Math.ceil(hi/60)*60;
+  const hours = (hi - lo)/60;
+  const cols = 'minmax(46px,46px) repeat('+dates.length+',minmax(0,1fr))';
+  const t = todayISO();
+
+  let s = '<div class="grid-cal" data-lo="'+lo+'" data-hi="'+hi+'">';
+  s += '<div class="gc-head" style="grid-template-columns:'+cols+'"><div></div>'+
+    dates.map(d => '<div class="'+(d===t?'is-today':'')+'">'+(dates.length>1
+      ? DOW[dowOf(d)].slice(0,3)+'<br>'+fromISO(d).getDate()
+      : fmtDate(d,'long'))+'</div>').join('')+'</div>';
+  s += '<div class="gc-body"><div class="gc-cols" style="grid-template-columns:'+cols+'">';
+  s += '<div class="gc-gut">'+Array.from({length:hours},(_,i) =>
+      '<div class="gc-hour">'+fmtTime(lo+i*60)+'</div>').join('')+'</div>';
+
+  dates.forEach(d => {
+    const h = dayHours(d);
+    s += '<div class="gc-col" data-date="'+d+'">';
+    s += Array.from({length:hours},() => '<div class="gc-hour"></div>').join('');
+    const px = m => ((m - lo)/60)*HOUR_PX;
+    if (!h.open) s += '<div class="closed" style="top:0;height:'+(hours*HOUR_PX)+'px"></div>';
+    else {
+      if (h.start > lo) s += '<div class="closed" style="top:0;height:'+px(h.start)+'px"></div>';
+      if (h.end < hi) s += '<div class="closed" style="top:'+px(h.end)+'px;height:'+(hours*HOUR_PX - px(h.end))+'px"></div>';
+      if (h.breakOn) s += '<div class="closed" style="top:'+px(h.breakStart)+'px;height:'+((h.breakEnd-h.breakStart)/60*HOUR_PX)+'px"></div>';
+    }
+    if (d === t && nowMins() >= lo && nowMins() <= hi)
+      s += '<div class="nowline" style="top:'+px(nowMins())+'px"></div>';
+    apptsOn(d).forEach(a => {
+      const c = cust(a.customerId);
+      const top = px(a.start), hgt = Math.max(20, apptDuration(a)/60*HOUR_PX - 2);
+      s += '<button class="ev s-'+a.status+'" data-appt="'+a.id+'" data-drag="'+a.id+'" style="top:'+top+'px;height:'+hgt+'px">'+
+        '<b>'+esc(fullName(c))+'</b>'+(hgt > 34 ? '<span>'+fmtTime(a.start)+' · '+esc(serviceNames(a))+'</span>' : '')+'</button>';
+    });
+    s += '</div>';
+  });
+  s += '</div></div></div>';
+  return s;
+}
+
+/* drag to reschedule */
+function wireDrag(){
+  const cols = $('.gc-cols'); if (!cols) return;
+  const grid = $('.grid-cal'); const lo = Number(grid.dataset.lo);
+  let drag = null;
+
+  cols.addEventListener('pointerdown', e => {
+    const ev = e.target.closest('[data-drag]'); if (!ev) return;
+    const a = byId('appts', ev.dataset.drag); if (!a || a.status === 'cancelled') return;
+    drag = {el:ev, a, y0:e.clientY, x0:e.clientX, top0:parseFloat(ev.style.top), moved:false,
+            colW: $('.gc-col').getBoundingClientRect().width, date0:a.date};
+    ev.setPointerCapture(e.pointerId);
+  });
+  cols.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y0, dx = e.clientX - drag.x0;
+    if (!drag.moved && Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
+    drag.moved = true; drag.el.classList.add('drag');
+    drag.el.style.top = (drag.top0 + dy) + 'px';
+    drag.el.style.transform = 'translateX('+Math.round(dx/drag.colW)*drag.colW+'px)';
+    e.preventDefault();
+  });
+  const finish = e => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    d.el.classList.remove('drag'); d.el.style.transform = '';
+    if (!d.moved){ d.el.style.top = d.top0+'px'; return; }
+    const step = Number(S.settings.slot) || 15;
+    const dy = e.clientY - d.y0, dx = e.clientX - d.x0;
+    const mins = clamp(Math.round((d.a.start + dy/HOUR_PX*60)/step)*step, 0, 1440 - apptDuration(d.a));
+    const dates = calMode === 'day' ? [calDate] : weekDates();
+    const idx = clamp(dates.indexOf(d.date0) + Math.round(dx/d.colW), 0, dates.length-1);
+    const newDate = dates[idx];
+    if (mins === d.a.start && newDate === d.date0){ draw(); return; }
+    rescheduleAppt(d.a, newDate, mins);
+  };
+  cols.addEventListener('pointerup', finish);
+  cols.addEventListener('pointercancel', () => { if (drag){ drag.el.classList.remove('drag'); drag.el.style.transform=''; drag.el.style.top = drag.top0+'px'; drag = null; } });
+}
+
+function rescheduleAppt(a, newDate, newStart){
+  const old = {date:a.date, start:a.start};
+  a.date = newDate; a.start = newStart;
+  const clash = conflictsFor(a);
+  const commit = () => {
+    upsert('appts', a);
+    draw();
+    const c = cust(a.customerId);
+    toast('Moved to '+fmtDate(newDate,'rel')+' '+fmtTime(newStart)+((c && (c.phone || c.email)) ? ' — client notified' : ''));
+    /* the server tells the client it moved; nothing to do here */
+  };
+  if (clash.length){
+    a.date = old.date; a.start = old.start;
+    confirmSheet('That overlaps', fullName(cust(clash[0].customerId))+' is booked '+fmtTime(clash[0].start)+'–'+fmtTime(apptEnd(clash[0]))+'. Move it anyway?',
+      'Move anyway', () => { a.date = newDate; a.start = newStart; commit(); });
+    draw();
+    return;
+  }
+  commit();
+}
+</script>
+<script>
+"use strict";
+/* ============================================================
+   Clients
+   ============================================================ */
+function matchCustomer(c, q){
+  q = q.trim().toLowerCase(); if (!q) return true;
+  const digits = q.replace(/\D/g,'');
+  return fullName(c).toLowerCase().includes(q)
+    || String(c.email||'').toLowerCase().includes(q)
+    || (digits.length >= 3 && String(c.phone||'').replace(/\D/g,'').includes(digits));
+}
+/* Can we text this client? Needs a number, their recorded agreement, and no STOP. */
+function canText(c){ return !!(c && c.phone && c.smsConsent && !c.smsOptOut); }
+function textStatus(c){
+  if (!c || !c.phone) return {ok:false, label:'No phone number'};
+  if (c.smsOptOut) return {ok:false, label:'Replied STOP — no texts'};
+  if (!c.smsConsent) return {ok:false, label:'Not agreed yet — ask before texting'};
+  return {ok:true, label:'Agreed' + (c.smsConsentHow ? ' ' + c.smsConsentHow.toLowerCase().replace('texted start','by texting START') : '') +
+    (c.smsConsentAt ? ' on ' + fmtDate(iso(new Date(c.smsConsentAt))) : '')};
+}
+const needsTextOk = c => !!c.phone && !c.smsConsent && !c.smsOptOut;
+
+function sortedCustomers(){
+  const list = S.customers.filter(c => matchCustomer(c, custQuery) && (custSort !== 'textok' || needsTextOk(c)));
+  const key = {
+    name: (a,b) => (a.last||a.first||'').localeCompare(b.last||b.first||''),
+    recent: (a,b) => (lastVisit(b.id)?.date || '').localeCompare(lastVisit(a.id)?.date || ''),
+    spend: (a,b) => custSpend(b.id) - custSpend(a.id),
+    textok: (a,b) => (a.last||a.first||'').localeCompare(b.last||b.first||''),
+    added: (a,b) => (b.createdAt||0) - (a.createdAt||0),
+  }[custSort];
+  return list.sort(key);
+}
+
+function viewCustomers(){
+  let s = '<div style="padding:14px 0 0">';
+  s += '<div class="row" style="margin-bottom:12px">'+
+    '<label class="search grow">'+svg('search')+
+    '<input class="inp" id="custq" type="search" placeholder="Search name, phone or email" value="'+esc(custQuery)+'" aria-label="Search clients"></label>'+
+    '<button class="iconbtn" data-new="cust" aria-label="Add client" style="background:var(--plum);color:#fff">'+svg('plus')+'</button></div>';
+
+  s += '<div class="row-tight scrollx" style="padding-bottom:12px">'+
+    [['name','A–Z'],['recent','Recent visit'],['spend','Top spend'],['added','Newest']]
+      .concat(S.customers.some(needsTextOk) ? [['textok','Ask about texts ('+S.customers.filter(needsTextOk).length+')']] : []).map(([k,l]) =>
+      '<button class="pick" data-sort="'+k+'" aria-pressed="'+(custSort===k)+'">'+l+'</button>').join('')+'</div>';
+
+  s += '<div id="custlist">' + custListHTML() + '</div>';
+  s += '</div>';
+  return s;
+}
+function custListHTML(){
+  const list = sortedCustomers();
+  let s = '';
+  if (!S.customers.length){
+    s += '<div class="card empty"><h3>No clients yet</h3><p class="small">Add your regulars first — everything else hangs off them.</p>'+
+         '<button class="btn primary" data-new="cust">'+svg('userplus')+'Add your first client</button></div>';
+  } else if (!list.length){
+    s += '<div class="card empty"><h3>No match</h3><p class="small">Try part of a name, a phone number, or an email.</p></div>';
+  } else {
+    s += '<p class="tiny dim" style="margin-bottom:8px">'+list.length+' client'+(list.length>1?'s':'')+'</p>';
+    s += '<div class="card list">'+list.map(c => {
+      const lv = lastVisit(c.id), nv = nextVisit(c.id);
+      const sub = nv ? 'Next '+fmtDate(nv.date,'rel')+' · '+fmtTime(nv.start)
+        : lv ? 'Last in '+agoText(lv.date) : 'No visits yet';
+      return '<button class="item" data-cust="'+c.id+'">'+avatar(c)+
+        '<span class="grow"><span class="nm">'+esc(fullName(c))+'</span>'+
+        '<span class="tiny dim trunc" style="display:block">'+esc(sub)+'</span></span>'+
+        '<span class="num small" style="color:var(--brass)">'+money(custSpend(c.id))+'</span>'+svg('chev')+'</button>';
+    }).join('');
+    s += '</div>';
+  }
+  return s;
+}
+
+/* ---------- profile ---------- */
+let custTab = 'overview';
+function viewCustomer(id){
+  const c = cust(id);
+  if (!c) return '<div class="card empty" style="margin-top:20px"><h3>Client not found</h3><button class="btn ghost" data-go="customers">Back to clients</button></div>';
+  const appts = custAppts(id), lv = lastVisit(id), nv = nextVisit(id);
+  const notes = S.notes.filter(n => n.customerId === id).sort((a,b) => b.createdAt - a.createdAt);
+  const h = c.hair || {};
+
+  let s = '<div style="padding:12px 0 0">';
+  s += '<button class="btn sm ghost" data-go="customers" style="margin-bottom:14px">'+svg('back')+'Clients</button>';
+
+  s += '<div class="card pad"><div class="row" style="align-items:flex-start">'+avatar(c,'lg')+
+    '<div class="grow"><h2>'+esc(fullName(c))+'</h2>'+
+    '<p class="tiny dim">Client since '+fmtDate(c.createdAt ? iso(new Date(c.createdAt)) : todayISO())+'</p>'+
+    (c.contactPref ? '<p class="tiny dim">Prefers '+esc(c.contactPref)+'</p>' : '')+'</div>'+
+    '<button class="iconbtn plain" data-editcust="'+c.id+'" aria-label="Edit client">'+svg('edit')+'</button></div>';
+
+  s += '<div class="row-tight" style="margin-top:14px;flex-wrap:wrap">'+
+    (c.phone ? '<a class="btn sm ghost" href="'+telHref(c.phone)+'">'+svg('phone')+'Call</a>'+
+               '<button class="btn sm ghost" data-msgcust="'+c.id+'">'+svg('send')+'Text</button>' : '')+
+    (c.email ? '<button class="btn sm ghost" data-mailcust="'+c.id+'">'+svg('mail')+'Email</button>' : '')+
+    '<button class="btn sm primary" data-new="appt" data-cust="'+c.id+'">'+svg('plus')+'Book</button></div>';
+
+  s += '<hr class="rule"><div class="stats" style="grid-template-columns:repeat(3,1fr);gap:8px">'+
+    '<div class="stat" style="padding:10px"><div class="k">Visits</div><div class="v num" style="font-size:1.15rem">'+appts.filter(COUNTED).length+'</div></div>'+
+    '<div class="stat" style="padding:10px"><div class="k">Spent</div><div class="v num money" style="font-size:1.15rem">'+money(custSpend(id))+'</div></div>'+
+    '<div class="stat" style="padding:10px"><div class="k">Last in</div><div class="v num" style="font-size:1.15rem">'+(lv ? agoText(lv.date).replace(' ago','') : '—')+'</div></div>'+
+  '</div>';
+  if (nv) s += '<p class="small" style="margin-top:12px"><strong>Next:</strong> '+fmtDate(nv.date,'rel')+' at '+fmtTime(nv.start)+' — '+esc(serviceNames(nv))+'</p>';
+  s += '</div>';
+
+  s += '<div class="tabs" style="margin-top:18px">'+
+    [['overview','Details'],['hair','Hair & formula'],['photos','Photos ('+custPhotos(id).length+')'],['notes','Notes ('+notes.length+')'],['history','History ('+appts.length+')']]
+    .map(([k,l]) => '<button data-custtab="'+k+'" aria-selected="'+(custTab===k)+'">'+l+'</button>').join('')+'</div>';
+
+  if (custTab === 'overview'){
+    s += '<div class="card pad"><dl class="kv">'+
+      kv('Phone', c.phone) + kv('Email', c.email) + kv('Birthday', bdayLabel(c.dob)) +
+      kv('Address', c.address) + kv('Preferred contact', c.contactPref) +
+      kv('Added', c.createdAt ? fmtDate(iso(new Date(c.createdAt))) : '') + '</dl>';
+    const au = custAuto(c);
+    const cps = liveCoupons(c.id);
+    if (cps.length){
+      s += '<hr class="rule">' + cps.map(cp =>
+        '<div class="row" style="align-items:flex-start;background:color-mix(in srgb,var(--brass) 10%,transparent);border-radius:12px;padding:11px 12px;margin-bottom:8px">'+
+          '<span style="font-size:1.3rem;line-height:1">\u{1F382}</span>'+
+          '<span class="grow"><span style="font-weight:700">'+couponOff(cp)+' birthday coupon</span>'+
+          '<span class="tiny dim" style="display:block">Code <b style="color:var(--text);letter-spacing:.04em">'+esc(cp.code)+'</b> · good until '+fmtDate(cp.expiresOn)+'</span>'+
+          '<span class="tiny dim" style="display:block">Applied automatically when you take payment.</span></span></div>').join('');
+    }
+    const ts = textStatus(c);
+    s += '<hr class="rule"><span class="lab">Text messages</span>'+
+      '<p class="small" style="font-weight:600;color:'+(ts.ok ? 'var(--teal)' : c.smsOptOut ? 'var(--rose)' : 'var(--dim)')+'">'+esc(ts.label)+'</p>'+
+      (!ts.ok && c.phone && !c.smsOptOut ? '<button class="btn sm ghost" data-editcust="'+c.id+'" style="margin-top:6px">Record their answer</button>' : '');
+    s += '<hr class="rule"><span class="lab">Automatic emails</span>';
+    if (!c.email) s += '<p class="small dim">No email address on file, so nothing can be sent.</p>';
+    else s += '<dl class="kv">'+
+      '<dt>Night before</dt><dd>'+(au.nightBefore ? 'On, from '+fmtTime((S.settings.nightHour??19)*60) : 'Off')+'</dd>'+
+      '<dt>Rebooking nudge</dt><dd>'+(au.rebookOn ? 'Every '+au.rebookDays+' days' : 'Off')+'</dd>'+
+      '<dt>Birthday wishes</dt><dd>'+(!au.birthday ? 'Off' : (bdayLabel(c.dob) ? 'On, '+bdayLabel(c.dob) : 'Add their birthday'))+'</dd>'+
+      (au.rebookOn && lv && !nv ? '<dt>Next nudge</dt><dd>'+fmtDate(iso(new Date(Math.max(whenTS(lv.date,720), lastMessageAt(c.id,'rebook')) + au.rebookDays*86400000)),'rel')+'</dd>' : '')+
+      '</dl>';
+    s += '<div class="row-tight" style="margin-top:16px"><button class="btn sm ghost" data-editcust="'+c.id+'">'+svg('edit')+'Edit</button>'+
+         '<button class="btn sm danger" data-delcust="'+c.id+'">'+svg('trash')+'Delete</button></div></div>';
+  }
+
+  if (custTab === 'hair'){
+    s += '<div class="card pad"><dl class="kv">'+
+      kv('Hair type', h.type) + kv('Colour formula', h.formula) + kv('Products used', h.products) +
+      kv('Allergies / sensitivities', h.allergies) + kv('Preferred style', h.style) +
+      kv('Special instructions', h.instructions) + '</dl>'+
+      '<button class="btn sm ghost" data-editcust="'+c.id+'" style="margin-top:14px">'+svg('edit')+'Edit hair details</button></div>';
+  }
+
+  if (custTab === 'photos'){
+    const pics = custPhotos(id);
+    const visit = todaysAppt(c.id);
+    s += '<div class="shoot">'+
+      '<button class="sb" data-shoot="'+c.id+'|Before|">'+svg('camera')+'Before<small>opens camera</small></button>'+
+      '<button class="sa" data-shoot="'+c.id+'|After|">'+svg('camera')+'After<small>opens camera</small></button></div>';
+    s += '<p class="tiny dim center" style="margin-bottom:16px">'+
+      (visit ? 'Filed under today\'s '+esc(serviceNames(visit))+' at '+fmtTime(visit.start)+'. ' : 'Tagged and saved to '+esc(c.first || 'their')+'\'s file. ')+
+      '<button class="tiny" data-addphoto="'+c.id+'" style="color:var(--plum);font-weight:700;text-decoration:underline">Choose from library instead</button></p>';
+
+    const pairs = visitPairs(c.id);
+    if (pairs.length){
+      s += '<div class="sec-head"><h3>Before &amp; after</h3></div>';
+      s += pairs.map(g => pairCard(g, c.id)).join('');
+    }
+
+    if (!pics.length && !uploading){
+      s += '<div class="pdrop"><p class="small">No photos yet.</p>'+
+           '<p class="tiny" style="margin-top:6px">Snap a before when they sit down and an after when they leave — they pair up by visit.</p></div>';
+    } else {
+      s += '<div class="sec-head" style="margin-top:6px"><h3>All photos</h3><span class="tiny dim">'+pics.length+'</span></div>';
+      s += '<div class="pgrid">'+
+        Array.from({length: uploading}, () => '<div class="pcell pending">Saving…</div>').join('')+
+        pics.map(photoCell).join('')+'</div>';
+      s += '<p class="tiny dim" style="margin-top:10px">Tap a photo to caption or retag it.</p>';
+    }
+  }
+
+  if (custTab === 'notes'){
+    s += '<button class="btn primary block" data-addnote="'+c.id+'" style="margin-bottom:14px">'+svg('plus')+'Add a note</button>';
+    s += notes.length ? '<div class="card pad">'+notes.map(n => {
+      const a = n.apptId ? byId('appts', n.apptId) : null;
+      return '<div class="note"><div class="meta">'+fmtDate(iso(new Date(n.createdAt)))+' · '+fmtTime(new Date(n.createdAt).getHours()*60+new Date(n.createdAt).getMinutes())+
+        (n.tag ? ' · '+esc(n.tag) : '')+(a ? ' · from '+esc(serviceNames(a))+' on '+fmtDate(a.date) : '')+'</div>'+
+        '<p>'+esc(n.text)+'</p>'+
+        '<div class="row-tight" style="margin-top:6px"><button class="btn sm ghost" data-editnote="'+n.id+'">Edit</button>'+
+        '<button class="btn sm danger" data-delnote="'+n.id+'">Delete</button></div></div>';
+    }).join('')+'</div>' : '<div class="card empty"><p class="small">No notes yet. Formulas, allergies, what they said about the fringe — it all goes here.</p></div>';
+  }
+
+  if (custTab === 'history'){
+    s += appts.length ? '<div class="card list">'+appts.map(a =>
+      '<button class="item" data-appt="'+a.id+'">'+
+      '<span class="grow"><span class="nm small">'+fmtDate(a.date)+' · '+fmtTime(a.start)+'</span>'+
+      '<span class="tiny dim trunc" style="display:block">'+esc(serviceNames(a))+' · '+apptDuration(a)+' min</span></span>'+
+      '<span style="text-align:right"><span class="num small" style="display:block">'+money(COUNTED(a)?apptTotal(a):apptServiceTotal(a))+'</span>'+
+      statusChip(a.status)+'</span></button>').join('')+'</div>'
+      : '<div class="card empty"><p class="small">No appointments yet.</p><button class="btn primary" data-new="appt" data-cust="'+c.id+'">'+svg('plus')+'Book one</button></div>';
+  }
+
+  s += '</div>';
+  return s;
+}
+function kv(k, v){ return v ? '<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>' : ''; }
+
+/* ---------- client form ---------- */
+function customerForm(id, afterSave){
+  const c = id ? Object.assign({}, cust(id)) : {};
+  const h = Object.assign({}, c.hair || {});
+  const auto = custAuto(c);
+  const f = (name, label, type, val, ph) =>
+    '<label class="field"><span class="lab">'+label+'</span>'+
+    (type === 'area' ? '<textarea class="inp" name="'+name+'" placeholder="'+esc(ph||'')+'">'+esc(val||'')+'</textarea>'
+      : '<input class="inp" name="'+name+'" type="'+type+'" value="'+esc(val||'')+'" placeholder="'+esc(ph||'')+'">')+'</label>';
+
+  const body =
+    '<div class="row" style="margin-bottom:16px">'+
+      '<span id="photoprev">'+avatar(c.first ? c : {first:'+'},'lg')+'</span>'+
+      '<div class="grow"><button class="btn sm ghost" id="pickphoto">Choose photo</button>'+
+      (c.photo ? ' <button class="btn sm danger" id="rmphoto">Remove</button>' : '')+
+      '<p class="tiny dim" style="margin-top:5px">Optional. Stored with the client.</p></div>'+
+      '<input type="file" id="photofile" accept="image/*" hidden></div>'+
+    '<div class="grid2">'+f('first','First name','text',c.first)+f('last','Last name','text',c.last)+'</div>'+
+    '<div class="grid2">'+f('phone','Phone','tel',c.phone,'(555) 010-2030')+f('email','Email','email',c.email)+'</div>'+
+    (function(){
+      const b = bdayParts(c.dob) || {m:0, d:0, y:''};
+      return '<span class="lab">Birthday</span>'+
+        '<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-bottom:13px">'+
+          '<select class="inp" name="b_m" aria-label="Birthday month"><option value="">Month</option>'+
+            MON.map((mn,i) => '<option value="'+(i+1)+'"'+(b.m===i+1?' selected':'')+'>'+mn+'</option>').join('')+'</select>'+
+          '<select class="inp" name="b_d" aria-label="Birthday day"><option value="">Day</option>'+
+            Array.from({length:31},(_,i) => '<option'+(b.d===i+1?' selected':'')+'>'+(i+1)+'</option>').join('')+'</select>'+
+          '<input class="inp" name="b_y" inputmode="numeric" maxlength="4" placeholder="Year" aria-label="Birth year (optional)" value="'+esc(b.y)+'">'+
+        '</div>';
+    })()+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Preferred contact</span><select class="inp" name="contactPref">'+
+      ['Text','Email','Phone call'].map(o => '<option'+(c.contactPref===o?' selected':'')+'>'+o+'</option>').join('')+'</select></label><span></span></div>'+
+    f('address','Address','text',c.address)+
+    '<hr class="rule"><h3 style="margin-bottom:10px">Hair notes</h3>'+
+    '<div class="grid2">'+f('h_type','Hair type','text',h.type,'Fine, wavy, colour-treated')+
+      f('h_style','Preferred style','text',h.style,'Long layers, side part')+'</div>'+
+    f('h_formula','Colour formula','area',h.formula,'6N + 7NG 20vol, 35 min')+
+    f('h_products','Products used','text',h.products,'Olaplex 3, purple shampoo')+
+    f('h_allergies','Allergies or sensitivities','text',h.allergies,'PPD sensitivity — patch test')+
+    f('h_instructions','Special instructions','area',h.instructions,'Books late afternoon only. Hates a blunt line.')+
+    '<hr class="rule"><h3 style="margin-bottom:4px">Text messages</h3>'+
+    (c.smsOptOut
+      ? '<p class="small" style="color:var(--rose);font-weight:600;margin-bottom:10px">They replied STOP, so they can\'t be texted. If they text START, texts switch back on by themselves.</p>'
+      : '<div style="background:var(--mist);border-radius:12px;padding:11px 13px;margin:8px 0 4px">'+
+          '<p class="tiny" style="font-weight:700;margin-bottom:4px">Ask them first:</p>'+
+          '<p class="tiny" style="line-height:1.5">\u201CCan I text you appointment reminders, birthday wishes and the odd offer? '+
+          'Usually 2\u20134 texts per appointment, message and data rates may apply, and you can reply STOP any time. It\'s optional.\u201D</p></div>'+
+        '<label class="check"><input type="checkbox" name="sms_ok"'+(c.smsConsent?' checked':'')+'>'+
+          '<span><span style="font-weight:600">They said yes to texts</span>'+
+          '<span class="tiny dim" style="display:block">'+(c.smsConsent && c.smsConsentAt
+            ? 'Recorded '+fmtDate(iso(new Date(c.smsConsentAt)))+(c.smsConsentHow ? ', '+esc(c.smsConsentHow.toLowerCase()) : '')+'. Untick if they change their mind.'
+            : 'Leave unticked until they\'ve agreed. Nothing is texted without it.')+'</span></span></label>'+
+        '<label class="field" style="max-width:220px"><span class="lab">How they agreed</span><select class="inp" name="sms_how">'+
+          ['In person','Paper form','Texted START'].map(o => '<option'+((c.smsConsentHow||'In person')===o?' selected':'')+'>'+o+'</option>').join('')+
+        '</select></label>')+
+    '<hr class="rule"><h3 style="margin-bottom:4px">Automatic emails</h3>'+
+    '<p class="tiny dim" style="margin-bottom:10px">Queued for you on the dashboard the moment they come due'+
+      (c.email ? '.' : '. Add an email address above to switch these on.')+'</p>'+
+    '<label class="check"><input type="checkbox" name="a_night"'+(auto.nightBefore?' checked':'')+'>'+
+      '<span><span style="font-weight:600">Email the night before every appointment</span>'+
+      '<span class="tiny dim" style="display:block">Goes out from '+fmtTime((S.settings.nightHour??19)*60)+' the evening before.</span></span></label>'+
+    '<label class="check"><input type="checkbox" name="a_rebook"'+(auto.rebookOn?' checked':'')+'>'+
+      '<span><span style="font-weight:600">Email to rebook when they\'re overdue</span>'+
+      '<span class="tiny dim" style="display:block">Repeats until they book again.</span></span></label>'+
+    '<label class="field" style="max-width:190px"><span class="lab">Rebook after (days)</span>'+
+      '<input class="inp" name="a_days" type="number" inputmode="numeric" min="7" max="365" value="'+auto.rebookDays+'"></label>'+
+    '<label class="check"><input type="checkbox" name="a_bday"'+(auto.birthday?' checked':'')+'>'+
+      '<span><span style="font-weight:600">Birthday wishes by email and text</span>'+
+      '<span class="tiny dim" style="display:block">On the day, at '+fmtTime((S.settings.birthdayHour??9)*60)+
+        ((S.settings.coupon||{}).on ? ', with your birthday coupon' : '')+'. Needs a birthday above.</span></span></label>';
+
+  openSheet({
+    title: id ? 'Edit client' : 'New client',
+    body,
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">'+(id?'Save changes':'Add client')+'</button>',
+    onMount(root){
+      let photo = c.photo || '';
+      $('#pickphoto', root).onclick = () => $('#photofile', root).click();
+      const rm = $('#rmphoto', root); if (rm) rm.onclick = () => { photo = ''; $('#photoprev', root).innerHTML = avatar({first:'+'},'lg'); };
+      $('#photofile', root).onchange = e => {
+        const file = e.target.files[0]; if (!file) return;
+        shrinkImage(file, 200).then(d => { photo = d; $('#photoprev', root).innerHTML = '<span class="av lg"><img src="'+d+'" alt=""></span>'; })
+          .catch(() => toast('Could not read that image'));
+      };
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="save"]', root).onclick = () => {
+        const g = n => { const el = $('[name="'+n+'"]', root); return el ? el.value.trim() : ''; };
+        if (!g('first') && !g('last')){ toast('A name helps'); $('[name="first"]', root).classList.add('bad'); return; }
+        const rec = Object.assign(c, {
+          id: c.id || uid(), first:g('first'), last:g('last'), phone:g('phone'), email:g('email'),
+          dob:(function(){
+            const m = Number(g('b_m')), d = Number(g('b_d')), y = g('b_y').replace(/\D/g,'');
+            if (!m || !d) return '';
+            return (y.length === 4 ? y : '-') + '-' + pad2(m) + '-' + pad2(d);
+          })(), address:g('address'), contactPref:g('contactPref'), photo,
+          /* consent keeps the date it was first given */
+          smsConsent: (function(){ const el = $('[name="sms_ok"]', root); return el ? el.checked : !!c.smsConsent; })(),
+          smsConsentAt: (function(){ const el = $('[name="sms_ok"]', root);
+            const on = el ? el.checked : !!c.smsConsent;
+            return on ? (c.smsConsent && c.smsConsentAt ? c.smsConsentAt : Date.now()) : null; })(),
+          smsConsentHow: (function(){ const el = $('[name="sms_ok"]', root), how = $('[name="sms_how"]', root);
+            return (el ? el.checked : c.smsConsent) ? (how ? how.value : (c.smsConsentHow || 'In person')) : ''; })(),
+          createdAt: c.createdAt || Date.now(),
+          hair:{ type:g('h_type'), style:g('h_style'), formula:g('h_formula'), products:g('h_products'),
+                 allergies:g('h_allergies'), instructions:g('h_instructions') },
+          auto:{ nightBefore: $('[name="a_night"]', root).checked,
+                 rebookOn: $('[name="a_rebook"]', root).checked,
+                 rebookDays: clamp(Number(g('a_days'))||60, 7, 365),
+                 birthday: $('[name="a_bday"]', root).checked }
+        });
+        upsert('customers', rec);
+        closeSheet();
+        toast(id ? 'Client saved' : 'Client added');
+        if (afterSave) afterSave(rec); else draw();
+      };
+    }
+  });
+}
+
+/* Resize in the browser before uploading: a 12MP phone photo turns into about
+   300KB, which is the difference between instant and hopeless on salon wifi. */
+function shrinkBlob(file, max, quality){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onerror = () => rej(new Error('Could not read that file'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => rej(new Error('That file is not an image'));
+      img.onload = () => {
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * sc));
+        cv.height = Math.max(1, Math.round(img.height * sc));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(b => b ? res({blob:b, w:cv.width, h:cv.height}) : rej(new Error('Could not process that image')),
+          'image/jpeg', quality);
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+const PHOTO_TAGS = ['Before','After','Formula','Inspiration'];
+
+let uploading = 0;
+function photoURL(id, size){ return '/api/photos/'+id+(size === 'thumb' ? '?size=thumb' : ''); }
+
+/* the visit a photo taken right now belongs to: today's appointment for this
+   client, if there is one */
+function todaysAppt(customerId){
+  const t = todayISO();
+  const list = S.appts.filter(a => a.customerId === customerId && a.date === t && a.status !== 'cancelled')
+    .sort((a,b) => Math.abs(a.start - nowMins()) - Math.abs(b.start - nowMins()));
+  return list[0] || null;
+}
+
+async function uploadPhotos(customerId, files, apptId, tag){
+  const list = Array.from(files).filter(f => /^image\//.test(f.type) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name||''));
+  if (!list.length){ toast('Pick an image'); return; }
+  let done = 0, failed = 0;
+  uploading += list.length; draw();
+  if (tag) toast('Saving '+tag.toLowerCase()+' photo…');
+  for (const f of list){
+    try {
+      const big = await shrinkBlob(f, 1600, 0.82);
+      const small = await shrinkBlob(f, 400, 0.72);
+      const fd = new FormData();
+      fd.append('customerId', customerId);
+      if (apptId) fd.append('appointmentId', apptId);
+      if (tag) fd.append('tag', tag);
+      fd.append('width', big.w); fd.append('height', big.h);
+      fd.append('full', big.blob, 'full.jpg');
+      fd.append('thumb', small.blob, 'thumb.jpg');
+      const res = await fetch('/api/photos', {method:'POST', body: fd, credentials:'same-origin'});
+      if (res.status === 401){ window.location.href = '/login'; return; }
+      if (!res.ok){ let m=''; try{ m=(await res.json()).error; }catch(e){} throw new Error(m || 'Upload failed'); }
+      S.photos.unshift(await res.json());
+      done++;
+    } catch(e){ failed++; toast(e.message || 'Could not upload that photo'); }
+    uploading = Math.max(0, uploading - 1);
+    draw();
+    if (sheetStack.length && sheetStack[sheetStack.length-1].refresh) sheetStack[sheetStack.length-1].refresh();
+  }
+  if (done) toast(tag && done === 1
+    ? tag + ' photo saved to ' + (fullName(cust(customerId)).split(' ')[0] || 'their') + '\'s file'
+    : done + ' photo' + (done>1?'s':'') + ' added' + (failed ? ', ' + failed + ' failed' : ''));
+}
+
+/* Straight to the rear camera, one shot, tagged and filed. On a phone this
+   skips the photo library entirely. */
+function shoot(customerId, tag, apptId){
+  const visit = apptId || (todaysAppt(customerId) || {}).id || null;
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.setAttribute('capture', 'environment');
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.onchange = () => {
+    const files = input.files;
+    input.remove();
+    if (files && files.length) uploadPhotos(customerId, files, visit, tag);
+  };
+  input.click();
+}
+
+function pickPhotos(customerId, apptId){
+  apptId = apptId || (todaysAppt(customerId) || {}).id || null;
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.multiple = true;
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.onchange = () => {
+    const files = input.files;
+    input.remove();
+    if (files && files.length) uploadPhotos(customerId, files, apptId || null, null);
+  };
+  input.click();
+}
+
+/* One before-and-after per visit: the latest Before and latest After taken
+   for the same appointment — or, with no appointment, on the same day. */
+function visitPairs(customerId){
+  const groups = {};
+  S.photos.filter(p => p.customerId === customerId && (p.tag === 'Before' || p.tag === 'After')).forEach(p => {
+    const key = p.apptId || ('day:' + iso(new Date(p.createdAt)));
+    const g = groups[key] || (groups[key] = {key, apptId: p.apptId, at: p.createdAt, before: null, after: null});
+    const slot = p.tag === 'Before' ? 'before' : 'after';
+    if (!g[slot] || (p.createdAt||0) > (g[slot].createdAt||0)) g[slot] = p;
+    g.at = Math.max(g.at, p.createdAt || 0);
+  });
+  return Object.values(groups).sort((a,b) => b.at - a.at);
+}
+function pairCard(g, customerId){
+  const a = g.apptId ? byId('appts', g.apptId) : null;
+  const img = (p, cls, label, tag) => p
+    ? '<img src="'+photoURL(p.id,'thumb')+'" alt="'+label+'" loading="lazy">'
+    : '<span class="missing" data-shoot="'+customerId+'|'+tag+'|'+(g.apptId||'')+'">'+svg('camera')+'Add '+label.toLowerCase()+'</span>';
+  const both = g.before && g.after;
+  return '<button class="pair" '+(both ? 'data-compare="'+g.before.id+'|'+g.after.id+'"' : '')+'>'+
+      img(g.before, 'b', 'Before', 'Before') + img(g.after, 'a', 'After', 'After') +
+      (g.before ? '<span class="pl b">Before</span>' : '') + (g.after ? '<span class="pl a">After</span>' : '') +
+    '</button>'+
+    '<div class="pairmeta"><span><b>'+fmtDate(a ? a.date : iso(new Date(g.at)))+'</b>'+(a ? ' · '+esc(serviceNames(a)) : '')+'</span>'+
+    (both ? '<span class="dim">Tap to compare</span>' : '')+'</div>';
+}
+
+function compareSheet(beforeId, afterId){
+  const b = S.photos.find(p => p.id === beforeId), a = S.photos.find(p => p.id === afterId);
+  if (!a || !b) return;
+  const visit = a.apptId ? byId('appts', a.apptId) : null;
+  openSheet({
+    title: fullName(cust(a.customerId)),
+    body:
+      '<div class="cmp" id="cmp">'+
+        '<img src="'+photoURL(a.id,'full')+'" alt="After">'+
+        '<img class="cb" src="'+photoURL(b.id,'full')+'" alt="Before">'+
+        '<span class="ch"><i>‹ ›</i></span>'+
+        '<span class="lb l">Before</span><span class="lb r">After</span>'+
+      '</div>'+
+      '<p class="small dim center" style="margin-top:10px">Drag across the photo to compare.</p>'+
+      (visit ? '<p class="small center" style="margin-top:4px"><b>'+fmtDate(visit.date,'long')+'</b> · '+esc(serviceNames(visit))+'</p>' : '')+
+      '<div class="row-tight" style="margin-top:14px;justify-content:center">'+
+        '<button class="btn sm ghost" data-photo="'+b.id+'">Edit before</button>'+
+        '<button class="btn sm ghost" data-photo="'+a.id+'">Edit after</button></div>',
+    onMount(root){
+      const box = $('#cmp', root), top = $('.cb', box), handle = $('.ch', box);
+      const set = x => {
+        const r = box.getBoundingClientRect();
+        const pct = clamp(((x - r.left) / (r.width || 1)) * 100, 0, 100);
+        top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+        handle.style.left = pct + '%';
+      };
+      let dragging = false;
+      box.addEventListener('pointerdown', e => { dragging = true; box.setPointerCapture(e.pointerId); set(e.clientX); });
+      box.addEventListener('pointermove', e => { if (dragging) set(e.clientX); });
+      box.addEventListener('pointerup', () => { dragging = false; });
+      box.addEventListener('pointercancel', () => { dragging = false; });
+      box.addEventListener('keydown', e => {
+        const cur = parseFloat(handle.style.left || '50');
+        const r = box.getBoundingClientRect();
+        if (e.key === 'ArrowLeft') set(r.left + r.width * (cur - 5) / 100);
+        if (e.key === 'ArrowRight') set(r.left + r.width * (cur + 5) / 100);
+      });
+      box.tabIndex = 0;
+      box.setAttribute('role', 'slider');
+      box.setAttribute('aria-label', 'Before and after comparison');
+    }
+  });
+}
+
+function custPhotos(id){
+  return S.photos.filter(p => p.customerId === id)
+    .sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+}
+
+function photoCell(p){
+  return '<button class="pcell" data-photo="'+p.id+'">'+
+    '<img src="/api/photos/'+p.id+'?size=thumb" alt="'+esc(p.caption || 'Client photo')+'" loading="lazy">'+
+    (p.tag ? '<span class="ptag" style="background:'+({After:'var(--plum)', Formula:'var(--brass)', Inspiration:'var(--teal)'}[p.tag] || 'rgba(28,18,30,.72)')+'">'+esc(p.tag)+'</span>' : '')+'</button>';
+}
+
+function photoSheet(id){
+  const p = S.photos.find(x => x.id === id);
+  if (!p) return;
+  const a = p.apptId ? byId('appts', p.apptId) : null;
+  openSheet({
+    title: fmtDate(iso(new Date(p.createdAt))),
+    body:
+      '<img class="pfull" src="/api/photos/'+p.id+'" alt="'+esc(p.caption || '')+'">'+
+      '<span class="lab">Tag</span><div class="picks" style="margin-bottom:14px">'+
+        PHOTO_TAGS.map(t => '<button class="pick" data-ptag="'+t+'" aria-pressed="'+(p.tag===t)+'">'+t+'</button>').join('')+'</div>'+
+      '<label class="field"><span class="lab">Caption</span>'+
+        '<input class="inp" name="caption" value="'+esc(p.caption||'')+'" placeholder="Root smudge, second pass"></label>'+
+      (a ? '<p class="small dim">From '+esc(serviceNames(a))+' on '+fmtDate(a.date)+'</p>' : '')+
+      '<div class="row-tight" style="margin-top:16px">'+
+        '<a class="btn sm ghost" href="/api/photos/'+p.id+'" target="_blank" rel="noopener">'+svg('dl')+'Open full size</a>'+
+        '<button class="btn sm danger" data-delphoto="'+p.id+'">'+svg('trash')+'Delete</button></div>',
+    foot:'<button class="btn ghost" data-act="cancel">Close</button><button class="btn primary" data-act="save">Save</button>',
+    onMount(root){
+      let tag = p.tag || '';
+      $$('[data-ptag]', root).forEach(b => b.onclick = () => {
+        tag = (tag === b.dataset.ptag) ? '' : b.dataset.ptag;
+        $$('[data-ptag]', root).forEach(x => x.setAttribute('aria-pressed', x.dataset.ptag === tag));
+      });
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="save"]', root).onclick = async () => {
+        const caption = $('[name="caption"]', root).value;
+        try {
+          const updated = await api('/api/photos/'+p.id, {method:'PATCH', body: JSON.stringify({caption, tag})});
+          const i = S.photos.findIndex(x => x.id === p.id);
+          if (i >= 0) S.photos[i] = updated;
+          closeSheet(); draw(); toast('Photo saved');
+        } catch(e){ if (String(e.message) !== 'signed out') toast(e.message); }
+      };
+    }
+  });
+}
+
+function shrinkImage(file, max){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onerror = rej;
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = rej;
+      img.onload = () => {
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width*sc); cv.height = Math.round(img.height*sc);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        res(cv.toDataURL('image/jpeg', .78));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- notes ---------- */
+function noteForm(customerId, noteId, apptId){
+  const n = noteId ? Object.assign({}, byId('notes', noteId)) : {customerId, apptId: apptId || null};
+  const tags = ['Formula','Consultation','Allergy','Preference','Follow-up'];
+  openSheet({
+    title: noteId ? 'Edit note' : 'New note',
+    body:'<label class="field"><span class="lab">Note</span>'+
+      '<textarea class="inp" name="text" style="min-height:140px" placeholder="Root 6N + 7NG 20vol, 35 min. Wants to go lighter next time.">'+esc(n.text||'')+'</textarea></label>'+
+      '<span class="lab">Tag</span><div class="picks">'+tags.map(t =>
+        '<button class="pick" data-tag="'+t+'" aria-pressed="'+(n.tag===t)+'">'+t+'</button>').join('')+'</div>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save note</button>',
+    onMount(root){
+      let tag = n.tag || '';
+      $$('[data-tag]', root).forEach(b => b.onclick = () => {
+        tag = (tag === b.dataset.tag) ? '' : b.dataset.tag;
+        $$('[data-tag]', root).forEach(x => x.setAttribute('aria-pressed', x.dataset.tag === tag));
+      });
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="save"]', root).onclick = () => {
+        const text = $('[name="text"]', root).value.trim();
+        if (!text){ toast('Write something first'); return; }
+        upsert('notes', Object.assign(n, {id:n.id||uid(), text, tag, createdAt:n.createdAt || Date.now()}));
+        closeSheet(); toast('Note saved'); draw();
+      };
+    }
+  });
+}
+</script>
+<script>
+"use strict";
+/* ============================================================
+   Services
+   ============================================================ */
+const SVC_CATS = ['Cutting','Colour','Styling','Treatment','Extensions','Other'];
+
+function viewServices(){
+  const list = S.services.slice().sort((a,b) =>
+    SVC_CATS.indexOf(a.category||'Other') - SVC_CATS.indexOf(b.category||'Other') || (a.name||'').localeCompare(b.name||''));
+  let s = '<div style="padding:14px 0 0">';
+  s += '<div class="spread" style="margin-bottom:14px"><p class="small dim">'+
+       list.filter(x => x.active !== false).length+' on the menu</p>'+
+       '<button class="btn sm primary" data-new="svc">'+svg('plus')+'Add service</button></div>';
+  if (!list.length){
+    s += '<div class="card empty"><h3>Your menu is empty</h3><p class="small">Add what you offer so booking takes two taps.</p>'+
+         '<button class="btn primary" data-new="svc">'+svg('plus')+'Add a service</button>'+
+         '<button class="btn ghost" data-seed="1" style="margin-left:8px">Use a starter menu</button></div>';
+  } else {
+    let cat = null;
+    s += '<div class="card list">';
+    list.forEach(x => {
+      const c = x.category || 'Other';
+      if (c !== cat){ cat = c; s += '<div style="padding:11px 14px 5px;font-size:.74rem;font-weight:800;color:var(--dim);background:var(--mist)">'+esc(cat)+'</div>'; }
+      s += '<button class="item" data-svc="'+x.id+'" style="'+(x.active===false?'opacity:.5':'')+'">'+
+        '<span class="grow"><span class="nm">'+esc(x.name)+(x.active===false?' <span class="tiny dim">(off)</span>':'')+'</span>'+
+        '<span class="tiny dim trunc" style="display:block">'+(x.desc ? esc(x.desc)+' · ' : '')+(x.duration||0)+' min</span></span>'+
+        '<span class="num" style="color:var(--brass)">'+money(x.price)+'</span>'+svg('chev')+'</button>';
+    });
+    s += '</div>';
+  }
+  s += '</div>';
+  return s;
+}
+
+function serviceForm(id){
+  const x = id ? Object.assign({}, svc(id)) : {active:true, duration:45, category:'Cutting'};
+  openSheet({
+    title: id ? 'Edit service' : 'New service',
+    body:
+      '<label class="field"><span class="lab">Name</span><input class="inp" name="name" value="'+esc(x.name||'')+'" placeholder="Cut & blow-dry"></label>'+
+      '<label class="field"><span class="lab">Description</span><input class="inp" name="desc" value="'+esc(x.desc||'')+'" placeholder="Wash, cut, round-brush finish"></label>'+
+      '<div class="grid2">'+
+      '<label class="field"><span class="lab">Price</span><input class="inp" name="price" type="number" inputmode="decimal" min="0" step="1" value="'+(x.price??'')+'"></label>'+
+      '<label class="field"><span class="lab">Duration (min)</span><input class="inp" name="duration" type="number" inputmode="numeric" min="5" step="5" value="'+(x.duration??45)+'"></label></div>'+
+      '<label class="field"><span class="lab">Category</span><select class="inp" name="category">'+
+        SVC_CATS.map(c => '<option'+(x.category===c?' selected':'')+'>'+c+'</option>').join('')+'</select></label>'+
+      '<label class="check"><input type="checkbox" name="active"'+(x.active!==false?' checked':'')+'>'+
+        '<span><span style="font-weight:600">Bookable</span><span class="tiny dim" style="display:block">Turn off to hide it without losing past bookings.</span></span></label>'+
+      (id ? '<button class="btn danger block" data-act="del" style="margin-top:14px">'+svg('trash')+'Delete service</button>' : ''),
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      const del = $('[data-act="del"]', root);
+      if (del) del.onclick = () => confirmSheet('Delete this service?','Past appointments keep their prices, but the service disappears from the menu.','Delete',
+        () => { remove('services', id); toast('Service deleted'); draw(); }, true);
+      $('[data-act="save"]', root).onclick = () => {
+        const g = n => $('[name="'+n+'"]', root).value.trim();
+        if (!g('name')){ toast('Give it a name'); return; }
+        upsert('services', Object.assign(x, {id:x.id||uid(), name:g('name'), desc:g('desc'),
+          price:Number(g('price'))||0, duration:Number(g('duration'))||30, category:g('category'),
+          active: $('[name="active"]', root).checked}));
+        closeSheet(); toast('Service saved'); draw();
+      };
+    }
+  });
+}
+
+function seedServices(){
+  [['Cut & blow-dry','Wash, cut, round-brush finish',65,60,'Cutting'],
+   ['Dry trim','Quick tidy-up, no wash',35,30,'Cutting'],
+   ['Fringe trim','',15,15,'Cutting'],
+   ['Root colour','Regrowth touch-up',85,90,'Colour'],
+   ['Full colour','',120,120,'Colour'],
+   ['Half-head highlights','',130,120,'Colour'],
+   ['Full-head highlights','',170,165,'Colour'],
+   ['Balayage','Hand-painted, freehand',200,180,'Colour'],
+   ['Toner / gloss','',45,30,'Colour'],
+   ['Blow-dry','',40,45,'Styling'],
+   ['Special occasion styling','Updos and events',90,75,'Styling'],
+   ['Olaplex treatment','',35,20,'Treatment'],
+   ['Deep conditioning','',30,25,'Treatment'],
+   ['Tape-in extensions','Application only',250,180,'Extensions'],
+   ['Consultation','Free, 15 minutes',0,15,'Other']
+  ].forEach(([name,desc,price,duration,category]) =>
+    upsert('services', {id:uid(), name, desc, price, duration, category, active:true}));
+  S.settings.seeded = true; saveSettings();
+  toast('Starter menu added — edit the prices'); draw();
+}
+
+/* ============================================================
+   Products
+   ============================================================ */
+function viewProducts(){
+  const list = S.products.slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const low = lowStock();
+  let s = '<div style="padding:14px 0 0">';
+  s += '<div class="spread" style="margin-bottom:14px"><p class="small dim">'+list.length+' product'+(list.length===1?'':'s')+'</p>'+
+       '<button class="btn sm primary" data-new="prod">'+svg('plus')+'Add product</button></div>';
+  if (low.length) s += '<div class="warnbar" style="margin-bottom:14px">'+low.length+' product'+(low.length>1?'s are':' is')+' at or below the minimum you set.</div>';
+  if (!list.length){
+    s += '<div class="card empty"><h3>No retail stock tracked</h3><p class="small">Optional — add products if you sell them at the chair.</p>'+
+         '<button class="btn primary" data-new="prod">'+svg('plus')+'Add a product</button></div>';
+  } else {
+    s += '<div class="card list">'+list.map(p => {
+      const isLow = Number(p.qty) <= Number(p.minQty||0);
+      return '<button class="item" data-prod="'+p.id+'">'+
+        '<span class="grow"><span class="nm">'+esc(p.name)+'</span>'+
+        '<span class="tiny dim trunc" style="display:block">'+[p.brand,p.category,p.sku].filter(Boolean).map(esc).join(' · ')+'</span></span>'+
+        '<span style="text-align:right"><span class="num" style="color:var(--brass);display:block">'+money(p.price)+'</span>'+
+        '<span class="tiny '+(isLow?'':'dim')+'" style="'+(isLow?'color:var(--rose);font-weight:700':'')+'">'+(p.qty||0)+' in stock</span></span></button>';
+    }).join('')+'</div>';
+  }
+  s += '</div>';
+  return s;
+}
+
+function productForm(id){
+  const p = id ? Object.assign({}, byId('products', id)) : {qty:0, minQty:2};
+  openSheet({
+    title: id ? 'Edit product' : 'New product',
+    body:
+      '<label class="field"><span class="lab">Product name</span><input class="inp" name="name" value="'+esc(p.name||'')+'" placeholder="Bond repair no.3"></label>'+
+      '<div class="grid2">'+
+      '<label class="field"><span class="lab">Brand</span><input class="inp" name="brand" value="'+esc(p.brand||'')+'"></label>'+
+      '<label class="field"><span class="lab">Category</span><input class="inp" name="category" value="'+esc(p.category||'')+'" placeholder="Treatment"></label></div>'+
+      '<div class="grid2">'+
+      '<label class="field"><span class="lab">Cost to you</span><input class="inp" name="cost" type="number" inputmode="decimal" min="0" step="0.01" value="'+(p.cost??'')+'"></label>'+
+      '<label class="field"><span class="lab">Selling price</span><input class="inp" name="price" type="number" inputmode="decimal" min="0" step="0.01" value="'+(p.price??'')+'"></label></div>'+
+      '<div class="grid2">'+
+      '<label class="field"><span class="lab">Quantity</span><input class="inp" name="qty" type="number" inputmode="numeric" min="0" value="'+(p.qty??0)+'"></label>'+
+      '<label class="field"><span class="lab">Alert below</span><input class="inp" name="minQty" type="number" inputmode="numeric" min="0" value="'+(p.minQty??2)+'"></label></div>'+
+      '<label class="field"><span class="lab">SKU</span><input class="inp" name="sku" value="'+esc(p.sku||'')+'"></label>'+
+      '<label class="field"><span class="lab">Notes</span><textarea class="inp" name="notes">'+esc(p.notes||'')+'</textarea></label>'+
+      (id ? '<button class="btn danger block" data-act="del">'+svg('trash')+'Delete product</button>' : ''),
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      const del = $('[data-act="del"]', root);
+      if (del) del.onclick = () => confirmSheet('Delete this product?','It stays on any past appointment it was sold with.','Delete',
+        () => { remove('products', id); toast('Product deleted'); draw(); }, true);
+      $('[data-act="save"]', root).onclick = () => {
+        const g = n => $('[name="'+n+'"]', root).value.trim();
+        if (!g('name')){ toast('Give it a name'); return; }
+        upsert('products', Object.assign(p, {id:p.id||uid(), name:g('name'), brand:g('brand'), category:g('category'),
+          cost:Number(g('cost'))||0, price:Number(g('price'))||0, qty:Number(g('qty'))||0,
+          minQty:Number(g('minQty'))||0, sku:g('sku'), notes:g('notes')}));
+        closeSheet(); toast('Product saved'); draw();
+      };
+    }
+  });
+}
+
+/* ============================================================
+   Payments
+   ============================================================ */
+function viewPayments(){
+  const t = todayISO();
+  const done = S.appts.filter(COUNTED).sort((a,b) => b.date.localeCompare(a.date) || b.start - a.start);
+  const unpaid = done.filter(a => (a.payment||{}).status !== 'paid');
+  const ws = weekStart(t);
+  let s = '<div style="padding:14px 0 0">';
+  s += '<div class="stats" style="grid-template-columns:repeat(2,1fr)">'+
+    stat('Today', money(revenueBetween(t,t)), true)+
+    stat('This week', money(revenueBetween(ws, addDays(ws,6))), true)+
+    stat('Unpaid', money(unpaid.reduce((x,a) => x + apptTotal(a), 0)))+
+    stat('Avg ticket', money(done.length ? done.reduce((x,a) => x+apptTotal(a),0)/done.length : 0), true)+'</div>';
+
+  if (unpaid.length){
+    s += '<div class="sec"><div class="sec-head"><h2>Waiting on payment</h2><span class="badge">'+unpaid.length+'</span></div>'+
+      '<div class="card list">'+unpaid.slice(0,10).map(payRow).join('')+'</div></div>';
+  }
+
+  s += '<div class="sec"><div class="sec-head"><h2>Recent takings</h2>'+
+       '<button class="btn sm ghost" data-go="reports">Reports</button></div>';
+  s += done.length ? '<div class="card list">'+done.slice(0,30).map(payRow).join('')+'</div>'
+    : '<div class="card empty"><h3>Nothing recorded yet</h3><p class="small">Mark an appointment complete and you\'ll be asked to take payment.</p></div>';
+  s += '</div></div>';
+  return s;
+}
+function payRow(a){
+  const c = cust(a.customerId), p = a.payment || {};
+  return '<button class="item" data-pay="'+a.id+'">'+
+    '<span class="grow"><span class="nm small">'+esc(fullName(c))+'</span>'+
+    '<span class="tiny dim trunc" style="display:block">'+fmtDate(a.date)+' · '+esc(serviceNames(a))+(p.method ? ' · '+esc(p.method) : '')+'</span></span>'+
+    '<span style="text-align:right"><span class="num" style="display:block;color:var(--brass)">'+money(apptTotal(a))+'</span>'+
+    '<span class="tiny '+(p.status==='paid'?'dim':'')+'" style="'+(p.status==='paid'?'':'color:var(--rose);font-weight:700')+'">'+(p.status==='paid'?'Paid':'Unpaid')+'</span></span></button>';
+}
+
+/* ============================================================
+   Reports
+   ============================================================ */
+let repRange = 'month';
+function viewReports(){
+  const t = todayISO();
+  const ranges = {week:[weekStart(t), addDays(weekStart(t),6)], month:[t.slice(0,8)+'01', iso(new Date(fromISO(t).getFullYear(), fromISO(t).getMonth()+1, 0))],
+    year:[t.slice(0,4)+'-01-01', t.slice(0,4)+'-12-31'], all:['0000-01-01','9999-12-31']};
+  const [from, to] = ranges[repRange];
+  const done = S.appts.filter(a => COUNTED(a) && a.date >= from && a.date <= to);
+  const rev = done.reduce((x,a) => x + apptTotal(a), 0);
+  const tips = done.reduce((x,a) => x + (Number((a.payment||{}).tip)||0), 0);
+  const prod = done.reduce((x,a) => x + apptProductTotal(a), 0);
+  const noShows = S.appts.filter(a => a.status==='noshow' && a.date>=from && a.date<=to).length;
+
+  let s = '<div style="padding:14px 0 0">';
+  s += '<div class="seg" style="margin-bottom:16px">'+[['week','This week'],['month','This month'],['year','This year'],['all','All time']]
+    .map(([k,l]) => '<button data-rep="'+k+'" aria-pressed="'+(repRange===k)+'">'+l+'</button>').join('')+'</div>';
+
+  s += '<div class="stats">'+
+    stat('Revenue', money(rev), true)+
+    stat('Appointments', done.length)+
+    stat('Average ticket', money(done.length ? rev/done.length : 0), true)+
+    stat('Tips', money(tips), true)+'</div>';
+
+  /* trend */
+  const buckets = trendBuckets(repRange);
+  const max = Math.max(1, ...buckets.map(b => b.v));
+  s += '<div class="sec"><div class="sec-head"><h2>Trend</h2></div><div class="card pad">'+
+    '<div class="spark">'+buckets.map(b =>
+      '<span class="col"><i style="height:'+Math.max(2, Math.round(b.v/max*70))+'px" title="'+money(b.v)+'"></i><span>'+esc(b.l)+'</span></span>').join('')+
+    '</div><p class="tiny dim center" style="margin-top:8px">Peak '+money(max)+'</p></div></div>';
+
+  /* by service */
+  const bySvc = {};
+  done.forEach(a => {
+    const list = apptServices(a);
+    const tot = apptServiceTotal(a);
+    const sum = list.reduce((x,s2) => x + (Number(s2.price)||0), 0) || 1;
+    list.forEach(s2 => { bySvc[s2.name] = (bySvc[s2.name]||0) + tot * ((Number(s2.price)||0)/sum); });
+  });
+  s += barBlock('Revenue by service', bySvc);
+
+  /* by client */
+  const byCust = {};
+  done.forEach(a => { const c = cust(a.customerId); if (c) byCust[fullName(c)] = (byCust[fullName(c)]||0) + apptTotal(a); });
+  s += barBlock('Top clients', byCust, 6);
+
+  /* extras */
+  s += '<div class="sec"><div class="sec-head"><h2>Detail</h2></div><div class="card pad"><dl class="kv">'+
+    '<dt>Service revenue</dt><dd>'+money(rev - tips - prod)+'</dd>'+
+    '<dt>Product sales</dt><dd>'+money(prod)+'</dd>'+
+    '<dt>Tips</dt><dd>'+money(tips)+'</dd>'+
+    '<dt>Discounts given</dt><dd>'+money(done.reduce((x,a) => x + (Number((a.payment||{}).discount)||0), 0))+'</dd>'+
+    '<dt>No-shows</dt><dd>'+noShows+'</dd>'+
+    '<dt>New clients</dt><dd>'+S.customers.filter(c => c.createdAt && iso(new Date(c.createdAt)) >= from && iso(new Date(c.createdAt)) <= to).length+'</dd>'+
+    '</dl></div></div>';
+
+  s += '<div class="sec"><button class="btn ghost block" data-export="csv">'+svg('dl')+'Export this period as CSV</button></div>';
+  s += '</div>';
+  return s;
+}
+function trendBuckets(range){
+  const t = todayISO(), out = [];
+  if (range === 'week' || range === 'month'){
+    const n = range === 'week' ? 7 : 14;
+    for (let i = n-1; i >= 0; i--){
+      const d = addDays(t, -i);
+      out.push({l: DOW[dowOf(d)][0] + (n>7 ? '' : ''), v: revenueBetween(d,d)});
+    }
+  } else {
+    for (let i = 11; i >= 0; i--){
+      const d = fromISO(t); d.setMonth(d.getMonth()-i);
+      const a = iso(new Date(d.getFullYear(), d.getMonth(), 1)), b = iso(new Date(d.getFullYear(), d.getMonth()+1, 0));
+      out.push({l: MON[d.getMonth()][0], v: revenueBetween(a,b)});
+    }
+  }
+  return out;
+}
+function barBlock(title, map, limit){
+  const rows = Object.entries(map).sort((a,b) => b[1]-a[1]).slice(0, limit || 8);
+  if (!rows.length) return '';
+  const max = Math.max(...rows.map(r => r[1])) || 1;
+  return '<div class="sec"><div class="sec-head"><h2>'+esc(title)+'</h2></div><div class="card pad"><div class="bars">'+
+    rows.map(([k,v]) => '<div class="bar-row"><span class="lab trunc">'+esc(k)+'</span><span class="amt">'+money(v)+'</span>'+
+      '<span class="bar-track"><span class="bar-fill" style="width:'+Math.round(v/max*100)+'%"></span></span></div>').join('')+
+    '</div></div></div>';
+}
+</script>
+<script>
+"use strict";
+/* ============================================================
+   Settings
+   ============================================================ */
+function viewSettings(){
+  const st = S.settings, b = st.biz;
+  const openDays = [0,1,2,3,4,5,6].filter(d => (st.hours || {})[d] && st.hours[d].open).length;
+  let s = '<div style="padding:14px 0 0">';
+
+  s += settingsBlock('Business', [
+    ['Business name', b.name || 'Not set', 'biz'],
+    ['Stylist name', b.stylist || 'Not set', 'biz'],
+    ['Phone', b.phone || 'Not set', 'biz'],
+    ['Email', b.email || 'Not set', 'biz'],
+    ['Address', b.address || 'Not set', 'biz'],
+  ]);
+
+  s += '<div class="sec"><div class="sec-head"><h2>Opening hours</h2></div><div class="card list">'+
+    [0,1,2,3,4,5,6].map(d => {
+      const h = st.hours[d];
+      return '<button class="item" data-hours="'+d+'"><span class="grow nm small">'+DOW[d]+'</span>'+
+        '<span class="small dim">'+(h.open ? fmtTime(h.start)+' – '+fmtTime(h.end)+(h.breakOn ? ' · break '+fmtTime(h.breakStart) : '') : 'Closed')+'</span>'+
+        svg('chev')+'</button>';
+    }).join('')+
+    '<button class="item" data-closures="1"><span class="grow nm small">Holidays & days off</span>'+
+      '<span class="small dim">'+((st.closures||[]).length || 'None')+'</span>'+svg('chev')+'</button>'+
+    '<button class="item" data-slot="1"><span class="grow nm small">Booking interval</span>'+
+      '<span class="small dim">'+st.slot+' min</span>'+svg('chev')+'</button>'+
+  '</div><p class="tiny dim" style="margin-top:7px">'+openDays+' working days a week. Closed time is shaded on the calendar and hidden from open slots.</p></div>';
+
+  s += '<div class="sec"><div class="sec-head"><h2>Automatic messages</h2></div><div class="card pad">'+
+    toggleRow('confirm','Confirmation when a booking is made') +
+    toggleRow('night','Email the night before an appointment') +
+    toggleRow('r2','Short-notice text on the day') +
+    toggleRow('rebook','Rebooking email when a client is overdue') +
+    '<hr class="rule">'+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Night-before email from</span><select class="inp" data-nighthour="1">'+
+        Array.from({length:12},(_,i) => i+10).map(hh =>
+          '<option value="'+hh+'"'+((st.nightHour??19)===hh?' selected':'')+'>'+fmtTime(hh*60)+'</option>').join('')+
+        '</select></label>'+
+      '<label class="field"><span class="lab">Day-of text (hours before)</span><input class="inp" data-notify="r2h" type="number" min="1" max="48" value="'+(st.notify.r2h||2)+'"></label>'+
+    '</div>'+
+    '<label class="field"><span class="lab">Rebook after (days) — the starting point for new clients</span>'+
+      '<input class="inp" data-rebookdays="1" type="number" inputmode="numeric" min="7" max="365" value="'+((st.autoDefaults||{}).rebookDays||60)+'"></label>'+
+    '<p class="tiny dim" style="margin:-4px 0 14px">Each client can be set differently on their own profile. These four switches are the master ones — turning one off silences it for everybody.</p>'+
+    '<label class="field"><span class="lab">Flag by hand after (weeks)</span><input class="inp" data-followweeks="1" type="number" min="1" max="52" value="'+(st.followupWeeks||6)+'"></label>'+
+    '<button class="btn ghost block" data-templates="1">'+svg('edit')+'Edit message wording</button>'+
+  '</div></div>';
+
+  const cp = st.coupon || {};
+  s += '<div class="sec"><div class="sec-head"><h2>Birthdays</h2></div><div class="card pad">'+
+    toggleRow('birthday','Send birthday wishes by email and text') +
+    '<label class="field" style="max-width:220px;margin-top:4px"><span class="lab">Send at</span><select class="inp" data-bdayhour="1">'+
+      Array.from({length:14},(_,i) => i+7).map(hh =>
+        '<option value="'+hh+'"'+((st.birthdayHour??9)===hh?' selected':'')+'>'+fmtTime(hh*60)+' on the day</option>').join('')+
+    '</select></label>'+
+    '<hr class="rule">'+
+    '<label class="check"><input type="checkbox" data-couponfield="on"'+(cp.on?' checked':'')+'>'+
+      '<span><span style="font-weight:600">Include a birthday coupon</span>'+
+      '<span class="tiny dim" style="display:block">Each client gets their own one-time code, applied when you take payment.</span></span></label>'+
+    '<div style="'+(cp.on?'':'opacity:.45;pointer-events:none')+'">'+
+      '<span class="lab">Discount</span>'+
+      '<div class="row" style="margin-bottom:13px">'+
+        '<div class="seg" style="flex:none">'+
+          '<button data-coupontype="percent" aria-pressed="'+(cp.type!=='amount')+'">%</button>'+
+          '<button data-coupontype="amount" aria-pressed="'+(cp.type==='amount')+'">'+esc(st.currency||'$')+'</button></div>'+
+        '<input class="inp" data-couponfield="value" type="number" inputmode="decimal" min="1" step="1" value="'+(cp.value??15)+'" style="max-width:120px">'+
+      '</div>'+
+      '<label class="field"><span class="lab">Good for (days)</span>'+
+        '<input class="inp" data-couponfield="days" type="number" inputmode="numeric" min="1" max="365" value="'+(cp.days??30)+'" style="max-width:120px"></label>'+
+      '<label class="field"><span class="lab">Fine print (optional)</span>'+
+        '<input class="inp" data-couponfield="note" maxlength="200" value="'+esc(cp.note||'')+'" placeholder="Not valid with other offers."></label>'+
+      '<p class="small" style="background:var(--mist);border-radius:10px;padding:10px 12px">Clients will get <b>'+
+        (cp.type==='amount' ? money(cp.value) : (cp.value||15)+'%')+' off</b> their next visit, good for '+(cp.days||30)+' days.</p>'+
+    '</div>'+
+  '</div></div>';
+
+  const withPhone = S.customers.filter(c => c.phone).length;
+  const agreed = S.customers.filter(canText).length;
+  const pub = location.origin;
+  s += '<div class="sec"><div class="sec-head"><h2>Text messages</h2></div><div class="card pad">'+
+    '<p class="small"><b>'+agreed+'</b> of '+withPhone+' clients with a phone number have agreed to texts. '+
+      'Nobody is texted until they have.</p>'+
+    (S.customers.some(needsTextOk) ? '<button class="btn sm ghost" data-asktexts="1" style="margin-top:10px">See who to ask ('+S.customers.filter(needsTextOk).length+')</button>' : '')+
+    '<hr class="rule">'+
+    '<p class="small" style="margin-bottom:8px">Twilio asks for these three public pages when you register for texting. They\'re already live and fill in from your business details:</p>'+
+    '<div class="list" style="border:1px solid var(--border);border-radius:12px">'+
+      [['/texts','How clients agree'],['/privacy','Privacy policy'],['/terms','Messaging terms']].map(([u,l]) =>
+        '<a class="item" href="'+u+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">'+
+        '<span class="grow"><span class="nm small">'+l+'</span><span class="tiny dim" style="display:block;word-break:break-all">'+esc(pub+u)+'</span></span>'+svg('chev')+'</a>').join('')+
+    '</div>'+
+  '</div></div>';
+
+  s += '<div class="sec"><div class="sec-head"><h2>Sending</h2></div><div class="card pad">'+
+    '<dl class="kv">'+
+      '<dt>Email</dt><dd style="color:'+(INTEGRATIONS.email?'var(--teal)':'var(--rose)')+'">'+(INTEGRATIONS.email?'Resend connected':'Not connected')+'</dd>'+
+      '<dt>Text messages</dt><dd style="color:'+(INTEGRATIONS.sms?'var(--teal)':'var(--rose)')+'">'+(INTEGRATIONS.sms?'Twilio connected':'Not connected')+'</dd>'+
+      '<dt>Scheduler</dt><dd>'+(LASTRUN ? 'Ran '+timeAgo(LASTRUN.at)+(LASTRUN.failed?' · '+LASTRUN.failed+' failed':'') : 'Not run yet')+'</dd>'+
+      '<dt>Time zone</dt><dd>'+esc(st.timezone || 'America/New_York')+'</dd>'+
+      '<dt>Photo storage</dt><dd style="color:'+(INTEGRATIONS.photos?'var(--teal)':'var(--rose)')+'">'+
+        (INTEGRATIONS.photos
+          ? (INTEGRATIONS.photoStore === 'r2' ? 'Cloudflare R2 connected' : 'Volume mounted')
+          : 'Not writable')+'</dd>'+
+    '</dl>'+
+    (INTEGRATIONS.dryRun ? '<div class="warnbar" style="margin-top:12px">Test mode is on. Messages are written to the log but never actually sent — turn off DRY_RUN on the server when you\'re ready.</div>' : '')+
+    ((!INTEGRATIONS.email || !INTEGRATIONS.sms) && !INTEGRATIONS.dryRun ? '<p class="tiny dim" style="margin-top:12px">Keys live on the server, never in this page. Add them to your environment variables and redeploy.</p>' : '')+
+  '</div></div>';
+
+  s += '<div class="sec"><div class="sec-head"><h2>Calendar & sync</h2></div><div class="card pad">'+
+    '<p class="small">Appointments live in this app\'s own calendar. To keep a phone calendar in step, export any appointment as a calendar file from its detail screen and open it — it drops straight into Google Calendar, Apple Calendar or Outlook.</p>'+
+    '<button class="btn ghost block" data-exporticsall="1" style="margin-top:12px">'+svg('dl')+'Export all upcoming appointments (.ics)</button>'+
+    '<p class="tiny dim" style="margin-top:10px">Live two-way Google Calendar sync isn\'t built yet — the export above keeps your phone calendar in step.</p>'+
+  '</div></div>';
+
+  s += '<div class="sec"><div class="sec-head"><h2>Appearance</h2></div><div class="card pad">'+
+    '<span class="lab">Colour scheme</span><div class="swatches" style="margin-bottom:16px">'+
+      Object.entries(PALETTES).map(([k,p]) =>
+        '<button class="swatch" data-setpalette="'+k+'" aria-pressed="'+((st.palette||'fuchsia')===k)+'">'+
+          '<i style="background:linear-gradient(120deg,'+p.g[0]+','+p.g[1]+')"></i>'+p.label+'</button>').join('')+
+    '</div>'+
+    '<span class="lab">Light or dark</span><div class="seg">'+[['auto','Auto'],['light','Light'],['dark','Dark']]
+      .map(([k,l]) => '<button data-setheme="'+k+'" aria-pressed="'+((st.theme||'auto')===k)+'">'+l+'</button>').join('')+'</div>'+
+    '<label class="field" style="margin-top:14px"><span class="lab">Currency symbol</span>'+
+      '<input class="inp" data-currency="1" value="'+esc(st.currency||'$')+'" maxlength="3" style="max-width:110px"></label>'+
+  '</div></div>';
+
+  s += '<div class="sec"><div class="sec-head"><h2>Your data</h2></div><div class="card pad stack">'+
+    '<p class="small dim">'+S.customers.length+' clients · '+S.appts.length+' appointments · '+S.notes.length+' notes · '+S.photos.length+' photos'+
+    (online ? ' · saved to your database' : ' · waiting to sync')+'</p>'+
+    '<button class="btn ghost block" data-export="json">'+svg('dl')+'Download a full backup (JSON)</button>'+
+    '<p class="tiny dim" style="margin:-4px 0 4px">Photos aren\'t in the JSON backup — they live in storage and are backed up with it.</p>'+
+    '<button class="btn ghost block" data-export="clients">'+svg('dl')+'Export clients (CSV)</button>'+
+    '<button class="btn ghost block" data-export="appts">'+svg('dl')+'Export appointments (CSV)</button>'+
+    '<button class="btn ghost block" data-import="1">Restore from a backup file</button>'+
+    '<input type="file" id="importfile" accept="application/json,.json" hidden>'+
+  '</div></div>';
+
+  s += '<div class="sec"><button class="btn ghost block" data-logout="1">Sign out</button></div>';
+  s += '<p class="tiny dim center" style="margin:26px 0 10px">Chair &amp; Comb · built for one pair of hands</p></div>';
+  return s;
+}
+function settingsBlock(title, rows){
+  return '<div class="sec"><div class="sec-head"><h2>'+esc(title)+'</h2>'+
+    '<button class="btn sm ghost" data-editbiz="1">'+svg('edit')+'Edit</button></div>'+
+    '<div class="card pad"><dl class="kv">'+rows.map(([k,v]) =>
+      '<dt>'+esc(k)+'</dt><dd class="trunc">'+esc(v)+'</dd>').join('')+'</dl></div></div>';
+}
+function toggleRow(key, label){
+  return '<label class="check"><input type="checkbox" data-notifytoggle="'+key+'"'+(S.settings.notify[key]?' checked':'')+'>'+
+    '<span style="font-weight:600">'+esc(label)+'</span></label>';
+}
+
+function bizForm(){
+  const b = Object.assign({}, S.settings.biz);
+  const f = (n,l,t,ph) => '<label class="field"><span class="lab">'+l+'</span><input class="inp" name="'+n+'" type="'+t+'" value="'+esc(b[n]||'')+'" placeholder="'+esc(ph||'')+'"></label>';
+  openSheet({
+    title:'Business details',
+    body: f('name','Business name','text','Chair & Comb') + f('stylist','Your name','text','Ava')+
+      '<div class="grid2">'+f('phone','Phone','tel')+f('email','Email','email')+'</div>'+
+      f('address','Address','text','12 Mill Lane, Studio 3')+ f('website','Website','url','https://'),
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="save"]', root).onclick = () => {
+        ['name','stylist','phone','email','address','website'].forEach(n => b[n] = $('[name="'+n+'"]', root).value.trim());
+        S.settings.biz = b; saveSettings(); applyBrand(); closeSheet(); toast('Saved'); draw();
+      };
+    }
+  });
+}
+
+function hoursForm(d){
+  const h = Object.assign({open:false, start:540, end:1080, breakOn:false, breakStart:780, breakEnd:840},
+    (S.settings.hours || {})[d] || {});
+  const timeSel = (name, val) => '<select class="inp" name="'+name+'">'+
+    Array.from({length:(22-6)*4+1},(_,i) => 6*60 + i*15).map(m =>
+      '<option value="'+m+'"'+(Number(val)===m?' selected':'')+'>'+fmtTime(m)+'</option>').join('')+'</select>';
+  openSheet({
+    title: DOW[d],
+    body:'<label class="check"><input type="checkbox" name="open"'+(h.open?' checked':'')+'>'+
+      '<span style="font-weight:600">Working this day</span></label><hr class="rule">'+
+      '<div class="grid2"><label class="field"><span class="lab">Opens</span>'+timeSel('start',h.start)+'</label>'+
+      '<label class="field"><span class="lab">Closes</span>'+timeSel('end',h.end)+'</label></div>'+
+      '<label class="check"><input type="checkbox" name="breakOn"'+(h.breakOn?' checked':'')+'>'+
+      '<span style="font-weight:600">Block out a break</span></label>'+
+      '<div class="grid2"><label class="field"><span class="lab">Break starts</span>'+timeSel('breakStart',h.breakStart)+'</label>'+
+      '<label class="field"><span class="lab">Break ends</span>'+timeSel('breakEnd',h.breakEnd)+'</label></div>'+
+      '<button class="btn ghost block" data-act="copy">Apply these hours to every working day</button>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save</button>',
+    onMount(root){
+      const read = () => ({ open:$('[name="open"]',root).checked, breakOn:$('[name="breakOn"]',root).checked,
+        start:Number($('[name="start"]',root).value), end:Number($('[name="end"]',root).value),
+        breakStart:Number($('[name="breakStart"]',root).value), breakEnd:Number($('[name="breakEnd"]',root).value) });
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="copy"]', root).onclick = () => {
+        const v = read();
+        [0,1,2,3,4,5,6].forEach(k => { if ((S.settings.hours[k] || {}).open) S.settings.hours[k] = Object.assign({}, v, {open:true}); });
+        S.settings.hours[d] = v; saveSettings(); closeSheet(); toast('Hours copied across'); draw();
+      };
+      $('[data-act="save"]', root).onclick = () => {
+        const v = read();
+        if (v.end <= v.start){ toast('Closing time must be after opening'); return; }
+        S.settings.hours[d] = v; saveSettings(); closeSheet(); toast(DOW[d]+' updated'); draw();
+      };
+    }
+  });
+}
+
+function closuresForm(){
+  const list = (S.settings.closures||[]).slice().sort((a,b) => a.from.localeCompare(b.from));
+  openSheet({
+    title:'Holidays & days off',
+    body:(list.length ? '<div class="card list" style="margin-bottom:16px">'+list.map((c,i) =>
+        '<div class="item"><span class="grow"><span class="nm small">'+esc(c.label||'Closed')+'</span>'+
+        '<span class="tiny dim" style="display:block">'+fmtDate(c.from)+(c.to && c.to!==c.from ? ' – '+fmtDate(c.to) : '')+'</span></span>'+
+        '<button class="btn sm danger" data-rmclosure="'+i+'">Remove</button></div>').join('')+'</div>'
+      : '<p class="small dim" style="margin-bottom:16px">Nothing blocked out yet.</p>')+
+      '<div class="grid2"><label class="field"><span class="lab">From</span><input class="inp" name="from" type="date" value="'+todayISO()+'"></label>'+
+      '<label class="field"><span class="lab">To</span><input class="inp" name="to" type="date" value="'+todayISO()+'"></label></div>'+
+      '<label class="field"><span class="lab">Label</span><input class="inp" name="label" placeholder="Holiday"></label>'+
+      '<button class="btn primary block" data-act="add">'+svg('plus')+'Block these dates</button>',
+    onMount(root){
+      $$('[data-rmclosure]', root).forEach(b => b.onclick = () => {
+        const idx = Number(b.dataset.rmclosure);
+        const sorted = (S.settings.closures||[]).slice().sort((a,b2) => a.from.localeCompare(b2.from));
+        const target = sorted[idx];
+        S.settings.closures = S.settings.closures.filter(c => c !== target);
+        saveSettings(); closuresForm(); draw();
+      });
+      $('[data-act="add"]', root).onclick = () => {
+        const from = $('[name="from"]', root).value, to = $('[name="to"]', root).value || from;
+        if (!from){ toast('Pick a start date'); return; }
+        S.settings.closures = (S.settings.closures||[]).concat([{from, to: to < from ? from : to, label:$('[name="label"]', root).value.trim()}]);
+        saveSettings(); closeSheet(); toast('Dates blocked'); draw();
+      };
+    }
+  });
+}
+
+function slotForm(){
+  openSheet({
+    title:'Booking interval',
+    body:'<p class="small dim" style="margin-bottom:14px">Start times and drag-to-move snap to this.</p>'+
+      '<div class="picks">'+[5,10,15,20,30,60].map(m =>
+        '<button class="pick" data-slotval="'+m+'" aria-pressed="'+(Number(S.settings.slot)===m)+'">'+m+' min</button>').join('')+'</div>',
+    onMount(root){
+      $$('[data-slotval]', root).forEach(b => b.onclick = () => {
+        S.settings.slot = Number(b.dataset.slotval); saveSettings(); closeSheet(); toast('Interval set'); draw();
+      });
+    }
+  });
+}
+
+const TPL_FIELDS = [
+  ['confirm_email_subject','Booking confirmation — email subject'],
+  ['confirm_email','Booking confirmation — email'],
+  ['confirm_sms','Booking confirmation — text'],
+  ['night_email_subject','Night before — email subject'],
+  ['night_email','Night before — email'],
+  ['night_sms','Night before — text'],
+  ['dayof_email_subject','On the day — email subject'],
+  ['dayof_email','On the day — email'],
+  ['dayof_sms','On the day — text'],
+  ['rebook_email_subject','Rebooking nudge — email subject'],
+  ['rebook_email','Rebooking nudge — email'],
+  ['rebook_sms','Rebooking nudge — text'],
+  ['reschedule_email_subject','Moved appointment — email subject'],
+  ['reschedule_email','Moved appointment — email'],
+  ['reschedule_sms','Moved appointment — text'],
+  ['cancel_email_subject','Cancellation — email subject'],
+  ['cancel_email','Cancellation — email'],
+  ['cancel_sms','Cancellation — text'],
+  ['birthday_email_subject','Birthday — email subject'],
+  ['birthday_email','Birthday — email ({couponLine} is the coupon sentence, blank when coupons are off)'],
+  ['birthday_sms','Birthday — text ({couponShort} is the short coupon line)'],
+]
+function templatesForm(){
+  const tpl = Object.assign({}, S.settings.tpl);
+  openSheet({
+    title:'Message wording',
+    body:'<p class="small dim" style="margin-bottom:6px">Anything in braces is filled in automatically.</p>'+
+      '<p class="tiny dim" style="margin-bottom:16px">{first} {name} {stylist} {business} {phone} {address} {date} {dateLong} {dateFull} {time} {services} {duration} {price} {since} {when}</p>'+
+      TPL_FIELDS.map(([k,l]) => '<label class="field"><span class="lab">'+l+'</span>'+
+        (k.endsWith('subject') ? '<input class="inp" name="'+k+'" value="'+esc(tpl[k]||'')+'">'
+          : '<textarea class="inp" name="'+k+'" style="min-height:'+(k.includes('email')?'150px':'86px')+'">'+esc(tpl[k]||'')+'</textarea>')+'</label>').join('')+
+      '<button class="btn ghost block" data-act="reset">Reset to the original wording</button>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save wording</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="reset"]', root).onclick = () => {
+        S.settings.tpl = defaultSettings().tpl; saveSettings(); replaceSheetTemplates(); toast('Wording reset');
+      };
+      $('[data-act="save"]', root).onclick = () => {
+        TPL_FIELDS.forEach(([k]) => tpl[k] = $('[name="'+k+'"]', root).value);
+        S.settings.tpl = tpl; saveSettings(); closeSheet(); toast('Wording saved');
+      };
+    }
+  });
+}
+function replaceSheetTemplates(){ closeSheet(); templatesForm(); }
+
+/* ---------- export / import ---------- */
+function download(filename, text, type){
+  const blob = new Blob([text], {type: type || 'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 400);
+}
+function csvCell(v){ const s = String(v==null?'':v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function toCSV(rows){ return rows.map(r => r.map(csvCell).join(',')).join('\r\n'); }
+
+function exportData(kind){
+  if (kind === 'json'){
+    download('chair-and-comb-backup-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings,
+      customers:S.customers, services:S.services, products:S.products, appts:S.appts, notes:S.notes, msgs:S.msgs}, null, 2), 'application/json');
+  } else if (kind === 'clients'){
+    const rows = [['First','Last','Phone','Email','Birthday','Address','Preferred contact','Added','Visits','Total spent','Last visit','Next visit','Hair type','Formula','Allergies']];
+    S.customers.forEach(c => { const h = c.hair||{}, lv = lastVisit(c.id), nv = nextVisit(c.id);
+      rows.push([c.first,c.last,c.phone,c.email,c.dob,c.address,c.contactPref, c.createdAt?iso(new Date(c.createdAt)):'',
+        custAppts(c.id).filter(COUNTED).length, custSpend(c.id).toFixed(2), lv?lv.date:'', nv?nv.date:'', h.type, h.formula, h.allergies]); });
+    download('clients-'+todayISO()+'.csv', toCSV(rows), 'text/csv');
+  } else {
+    const rows = [['Date','Time','Client','Phone','Services','Duration (min)','Status','Service total','Products','Discount','Tip','Total','Method','Payment','Notes']];
+    S.appts.slice().sort((a,b) => a.date.localeCompare(b.date) || a.start-b.start).forEach(a => {
+      const c = cust(a.customerId)||{}, p = a.payment||{};
+      rows.push([a.date, fmtTime(a.start), fullName(c), c.phone, serviceNames(a), apptDuration(a), statusLabel(a.status),
+        apptServiceTotal(a).toFixed(2), apptProductTotal(a).toFixed(2), (p.discount||0), (p.tip||0), apptTotal(a).toFixed(2),
+        p.method||'', p.status||'unpaid', a.notes||'']); });
+    download('appointments-'+todayISO()+'.csv', toCSV(rows), 'text/csv');
+  }
+  toast('Downloaded');
+}
+function importBackup(file){
+  const fr = new FileReader();
+  fr.onload = () => {
+    let data; try { data = JSON.parse(fr.result); } catch(e){ toast('That file isn\'t a valid backup'); return; }
+    if (!data || !Array.isArray(data.customers)){ toast('That file isn\'t a valid backup'); return; }
+    confirmSheet('Restore this backup?', 'It replaces everything currently in the app: '+data.customers.length+' clients and '+
+      ((data.appts||[]).length)+' appointments.', 'Restore', async () => {
+      if (data.settings) { S.settings = Object.assign(defaultSettings(), data.settings); saveSettings(); }
+      for (const k of COLS){
+        const incoming = Array.isArray(data[k]) ? data[k] : [];
+        for (const old of S[k].slice()) if (!incoming.some(x => x.id === old.id)) await unpersist(k, old.id);
+        S[k] = incoming;
+        for (const rec of incoming) await persist(k, rec);
+        lsSave(k);
+      }
+      applyBrand(); draw(); toast('Backup restored');
+    });
+  };
+  fr.readAsText(file);
+}
+
+/* ---------- .ics export ---------- */
+function icsStamp(dateISO_, mins){
+  const d = fromISO(dateISO_); d.setMinutes(mins);
+  return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+'T'+pad2(d.getHours())+pad2(d.getMinutes())+'00';
+}
+function icsFor(list){
+  const b = S.settings.biz;
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Chair and Comb//EN','CALSCALE:GREGORIAN'];
+  list.forEach(a => {
+    const c = cust(a.customerId) || {};
+    const desc = [serviceNames(a), c.phone ? 'Phone: '+c.phone : '', a.notes || ''].filter(Boolean).join('\\n');
+    lines.push('BEGIN:VEVENT','UID:'+a.id+'@chairandcomb',
+      'DTSTAMP:'+icsStamp(todayISO(), nowMins()),
+      'DTSTART:'+icsStamp(a.date, a.start), 'DTEND:'+icsStamp(a.date, apptEnd(a)),
+      'SUMMARY:'+fullName(c)+' — '+serviceNames(a),
+      'DESCRIPTION:'+desc,
+      b.address ? 'LOCATION:'+b.address : 'LOCATION:',
+      'STATUS:'+(a.status === 'cancelled' ? 'CANCELLED' : 'CONFIRMED'), 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+</script>
+<script>
+"use strict";
+/* ============================================================
+   Appointments
+   ============================================================ */
+function apptForm(id, preset){
+  const a = id ? JSON.parse(JSON.stringify(byId('appts', id))) : Object.assign({
+    id:'', customerId:'', serviceIds:[], date: calDate || todayISO(), start: 10*60,
+    status:'scheduled', notes:'', products:[], payment:{}
+  }, preset || {});
+  const live = {sel: (a.serviceIds||[]).slice(), customerId: a.customerId, date: a.date, start: a.start};
+
+  const activeServices = S.services.filter(s => s.active !== false || live.sel.includes(s.id));
+  const custOptions = S.customers.slice().sort((x,y) => fullName(x).localeCompare(fullName(y)));
+
+  const body =
+    '<label class="field"><span class="lab">Client</span>'+
+      '<select class="inp" name="customerId"><option value="">Choose a client…</option>'+
+      custOptions.map(c => '<option value="'+c.id+'"'+(live.customerId===c.id?' selected':'')+'>'+esc(fullName(c))+(c.phone?' · '+esc(c.phone):'')+'</option>').join('')+
+      '</select>'+
+      '<button class="btn sm ghost" id="newcust" style="margin-top:8px">'+svg('userplus')+'New client</button></label>'+
+
+    '<span class="lab">Services</span>'+
+    (activeServices.length ? '<div class="picks" id="svcpicks" style="margin-bottom:6px">'+
+      activeServices.map(s => '<button class="pick" data-sv="'+s.id+'" aria-pressed="'+live.sel.includes(s.id)+'">'+
+        esc(s.name)+' · '+money(s.price)+'</button>').join('')+'</div>'
+      : '<p class="small dim" style="margin-bottom:10px">No services yet — add one from the Services tab, or just set a price below.</p>')+
+    '<p class="tiny dim" style="margin-bottom:14px">Tap to add. Duration and price add up on their own.</p>'+
+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Date</span><input class="inp" name="date" type="date" value="'+esc(live.date)+'"></label>'+
+      '<label class="field"><span class="lab">Start time</span><input class="inp" name="start" type="time" value="'+pad2(Math.floor(live.start/60))+':'+pad2(live.start%60)+'"></label>'+
+    '</div>'+
+    '<div id="slots" style="margin-bottom:14px"></div>'+
+
+    '<div class="card pad" id="summary" style="margin-bottom:14px;background:var(--mist);box-shadow:none"></div>'+
+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Override duration</span><input class="inp" name="duration" type="number" inputmode="numeric" min="5" step="5" placeholder="auto" value="'+(a.duration||'')+'"></label>'+
+      '<label class="field"><span class="lab">Override price</span><input class="inp" name="priceOverride" type="number" inputmode="decimal" min="0" step="1" placeholder="auto" value="'+(a.priceOverride??'')+'"></label>'+
+    '</div>'+
+    '<label class="field"><span class="lab">Status</span><select class="inp" name="status">'+
+      STATUSES.map(s => '<option value="'+s.id+'"'+(a.status===s.id?' selected':'')+'>'+s.label+'</option>').join('')+'</select></label>'+
+    '<label class="field"><span class="lab">Notes for this appointment</span>'+
+      '<textarea class="inp" name="notes" placeholder="Wants to go two shades lighter. Bring the toner.">'+esc(a.notes||'')+'</textarea></label>';
+
+  openSheet({
+    title: id ? 'Edit appointment' : 'New appointment',
+    body,
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">'+(id?'Save changes':'Book it')+'</button>',
+    onMount(root){
+      const sumEl = $('#summary', root), slotsEl = $('#slots', root);
+      const readTime = () => { const v = $('[name="start"]', root).value || '10:00'; const [h,m] = v.split(':').map(Number); return h*60+m; };
+
+      function calc(){
+        live.date = $('[name="date"]', root).value || todayISO();
+        live.start = readTime();
+        live.customerId = $('[name="customerId"]', root).value;
+        const dur = Number($('[name="duration"]', root).value) ||
+          live.sel.map(svc).filter(Boolean).reduce((t,s) => t + (Number(s.duration)||0), 0) || 60;
+        const po = $('[name="priceOverride"]', root).value;
+        const price = po !== '' ? Number(po) : live.sel.map(svc).filter(Boolean).reduce((t,s) => t + (Number(s.price)||0), 0);
+        const probe = {id: a.id || '_new', date: live.date, start: live.start, duration: dur, serviceIds: live.sel};
+        const clash = conflictsFor(probe);
+        const h = dayHours(live.date);
+        const outside = !h.open || live.start < h.start || live.start + dur > h.end;
+
+        sumEl.innerHTML =
+          '<div class="spread"><span class="small dim">Ends</span><span class="num">'+fmtTime(live.start + dur)+'</span></div>'+
+          '<div class="spread" style="margin-top:4px"><span class="small dim">Duration</span><span class="num">'+dur+' min</span></div>'+
+          '<div class="spread" style="margin-top:4px"><span class="small dim">Total</span><span class="num" style="color:var(--brass);font-size:1.15rem">'+money(price)+'</span></div>'+
+          (clash.length ? '<p class="err" style="margin-top:8px">Overlaps '+esc(fullName(cust(clash[0].customerId)))+' at '+fmtTime(clash[0].start)+'</p>' : '')+
+          (outside ? '<p class="err" style="margin-top:6px">'+(h.open ? 'Outside your hours that day ('+fmtTime(h.start)+'–'+fmtTime(h.end)+')' : 'You\'re marked closed that day')+'</p>' : '');
+
+        const free = freeSlots(live.date, dur).slice(0, 14);
+        slotsEl.innerHTML = free.length
+          ? '<span class="lab">Open slots that day</span><div class="picks">'+free.map(m =>
+              '<button class="pick" data-slotpick="'+m+'" aria-pressed="'+(m===live.start)+'">'+fmtTime(m)+'</button>').join('')+'</div>'
+          : '<p class="tiny dim">No free slots that day at this length.</p>';
+        $$('[data-slotpick]', slotsEl).forEach(b => b.onclick = () => {
+          const m = Number(b.dataset.slotpick);
+          $('[name="start"]', root).value = pad2(Math.floor(m/60))+':'+pad2(m%60);
+          calc();
+        });
+      }
+
+      $$('[data-sv]', root).forEach(b => b.onclick = () => {
+        const sid = b.dataset.sv;
+        live.sel = live.sel.includes(sid) ? live.sel.filter(x => x !== sid) : live.sel.concat([sid]);
+        b.setAttribute('aria-pressed', live.sel.includes(sid));
+        calc();
+      });
+      ['date','start','duration','priceOverride','customerId'].forEach(n => {
+        const el = $('[name="'+n+'"]', root); if (el) el.addEventListener('change', calc);
+      });
+      $('#newcust', root).onclick = () => customerForm(null, rec => {
+        const sel = $('[name="customerId"]', root);
+        sel.insertAdjacentHTML('beforeend', '<option value="'+rec.id+'">'+esc(fullName(rec))+'</option>');
+        sel.value = rec.id; live.customerId = rec.id; calc();
+      });
+      calc();
+
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="save"]', root).onclick = () => {
+        const sel = $('[name="customerId"]', root);
+        if (!sel.value){ sel.classList.add('bad'); toast('Choose a client first'); return; }
+        if (!live.sel.length && !$('[name="priceOverride"]', root).value){
+          toast('Pick a service, or set a price'); return;
+        }
+        const wasStatus = a.status;
+        const rec = Object.assign(a, {
+          id: a.id || uid(),
+          customerId: sel.value,
+          serviceIds: live.sel,
+          date: $('[name="date"]', root).value,
+          start: readTime(),
+          duration: Number($('[name="duration"]', root).value) || 0,
+          priceOverride: $('[name="priceOverride"]', root).value === '' ? null : Number($('[name="priceOverride"]', root).value),
+          status: $('[name="status"]', root).value,
+          notes: $('[name="notes"]', root).value.trim(),
+          createdAt: a.createdAt || Date.now()
+        });
+        if (!rec.duration) delete rec.duration;
+        upsert('appts', rec);
+        closeSheet();
+        draw();
+        const c = cust(rec.customerId);
+        if (!id && S.settings.notify.confirm && c && (c.phone || c.email) && rec.status !== 'completed'){
+          toast('Booked — confirmation on its way');
+        } else if (rec.status === 'completed' && wasStatus !== 'completed'){
+          setTimeout(() => paymentSheet(rec.id), 320);
+        } else {
+          toast(id ? 'Appointment updated' : 'Appointment booked');
+        }
+      };
+    }
+  });
+}
+
+function apptSheet(id){
+  const a = byId('appts', id); if (!a) return;
+  const c = cust(a.customerId);
+  const p = a.payment || {};
+  const body =
+    '<button class="item" data-cust="'+a.customerId+'" style="padding:10px 0;border:none">'+avatar(c)+
+      '<span class="grow"><span class="nm">'+esc(fullName(c))+'</span>'+
+      (c && c.phone ? '<span class="tiny dim" style="display:block">'+esc(c.phone)+'</span>' : '')+'</span>'+svg('chev')+'</button>'+
+    '<hr class="rule">'+
+    '<dl class="kv">'+
+      '<dt>When</dt><dd>'+fmtDate(a.date,'long')+'<br>'+fmtTime(a.start)+' – '+fmtTime(apptEnd(a))+'</dd>'+
+      '<dt>Services</dt><dd>'+esc(serviceNames(a))+'</dd>'+
+      '<dt>Duration</dt><dd>'+apptDuration(a)+' min</dd>'+
+      '<dt>Service total</dt><dd>'+money(apptServiceTotal(a))+'</dd>'+
+      (apptProductTotal(a) ? '<dt>Products</dt><dd>'+money(apptProductTotal(a))+'</dd>' : '')+
+      (COUNTED(a) ? '<dt>Charged</dt><dd style="color:var(--brass)">'+money(apptTotal(a))+' · '+(p.status==='paid'?esc(p.method||'Paid'):'Unpaid')+'</dd>' : '')+
+    '</dl>'+
+    (a.notes ? '<div class="note" style="margin-top:14px"><div class="meta">Appointment note</div><p>'+esc(a.notes)+'</p></div>' : '')+
+    (function(){
+      const pics = S.photos.filter(p => p.apptId === a.id);
+      const pair = visitPairs(a.customerId).find(g => g.apptId === a.id);
+      let h = '<hr class="rule"><span class="lab">Photos</span>'+
+        '<div class="shoot" style="margin-top:6px">'+
+          '<button class="sb" data-shoot="'+a.customerId+'|Before|'+a.id+'">'+svg('camera')+'Before</button>'+
+          '<button class="sa" data-shoot="'+a.customerId+'|After|'+a.id+'">'+svg('camera')+'After</button></div>';
+      if (pair) h += pairCard(pair, a.customerId);
+      const others = pics.filter(p => !pair || (p.id !== (pair.before||{}).id && p.id !== (pair.after||{}).id));
+      if (others.length) h += '<div class="pgrid" style="margin-bottom:6px">'+others.map(photoCell).join('')+'</div>';
+      return h;
+    })()+
+    '<hr class="rule"><span class="lab">Status</span>'+
+    '<div class="picks">'+STATUSES.map(s => '<button class="pick" data-setstatus="'+a.id+'|'+s.id+'" aria-pressed="'+(a.status===s.id)+'">'+s.label+'</button>').join('')+'</div>'+
+    '<hr class="rule"><div class="picks">'+
+      '<button class="btn sm ghost" data-editappt="'+a.id+'">'+svg('edit')+'Edit</button>'+
+      (c && c.phone ? '<button class="btn sm ghost" data-msg="'+a.id+'|sms">'+svg('send')+'Text</button>' : '')+
+      (c && c.email ? '<button class="btn sm ghost" data-msg="'+a.id+'|email">'+svg('mail')+'Email</button>' : '')+
+      '<button class="btn sm ghost" data-addnote="'+a.customerId+'" data-appt-note="'+a.id+'">'+svg('plus')+'Note</button>'+
+      '<button class="btn sm ghost" data-addphoto="'+a.customerId+'" data-appt-photo="'+a.id+'">'+svg('plus')+'Photo from library</button>'+
+      '<button class="btn sm ghost" data-ics="'+a.id+'">'+svg('dl')+'Add to phone calendar</button>'+
+      (COUNTED(a) ? '<button class="btn sm ghost" data-pay="'+a.id+'">'+svg('cash')+'Payment</button>' : '')+
+      '<button class="btn sm danger" data-delappt="'+a.id+'">'+svg('trash')+'Delete</button>'+
+    '</div>';
+  openSheet({title: fmtDate(a.date,'rel')+' · '+fmtTime(a.start), body,
+    /* redrawn in place when a photo lands, so the new shot appears at once */
+    refresh(){ sheetStack.pop(); apptSheet(a.id); }});
+}
+
+function setStatus(id, status){
+  const a = byId('appts', id); if (!a) return;
+  const was = a.status;
+  a.status = status;
+  upsert('appts', a);
+  closeAllSheets(); draw();
+  const c = cust(a.customerId);
+  if (status === 'completed' && was !== 'completed'){ toast('Completed — take payment'); setTimeout(() => paymentSheet(id), 300); return; }
+  if (status === 'cancelled' && was !== 'cancelled' && c && (c.phone || c.email)){ toast('Cancelled — client notified'); return; }
+  toast(statusLabel(status));
+}
+
+/* ---------- payment ---------- */
+function paymentSheet(id){
+  const a = byId('appts', id); if (!a) return;
+  const p = Object.assign({discount:0, tip:0, method:'Cash', status:'paid'}, a.payment || {});
+  const prods = (a.products || []).slice();
+  const sTotal = apptServiceTotal(a);
+
+  const body =
+    '<div class="card pad" style="background:var(--mist);box-shadow:none;margin-bottom:16px">'+
+      '<div class="spread"><span class="small dim">Services</span><span class="num">'+money(sTotal)+'</span></div>'+
+      '<div class="spread" style="margin-top:4px"><span class="small dim">Products</span><span class="num" id="pt">'+money(0)+'</span></div>'+
+      '<div class="spread" style="margin-top:8px"><span style="font-weight:700">Total</span><span class="num" id="tt" style="font-size:1.4rem;color:var(--brass)">'+money(sTotal)+'</span></div>'+
+    '</div>'+
+    '<span class="lab">Products sold</span>'+
+    (S.products.length ? '<div class="picks" style="margin-bottom:14px">'+S.products.map(pr =>
+        '<button class="pick" data-pp="'+pr.id+'" aria-pressed="'+prods.some(x => x.productId===pr.id)+'">'+esc(pr.name)+' · '+money(pr.price)+'</button>').join('')+'</div>'
+      : '<p class="tiny dim" style="margin-bottom:14px">No products in stock yet.</p>')+
+    (function(){
+      const cps = liveCoupons(a.customerId, a.id);
+      if (!cps.length) return '';
+      return '<span class="lab">Coupon</span>' + cps.map(cp =>
+        '<button class="item" data-coupon="'+cp.id+'" style="border:1.5px dashed var(--brass);border-radius:12px;margin-bottom:12px;background:color-mix(in srgb,var(--brass) 8%,transparent)">'+
+          '<span style="font-size:1.2rem">\u{1F382}</span>'+
+          '<span class="grow"><span class="nm small">'+couponOff(cp)+' · '+esc(cp.code)+'</span>'+
+          '<span class="tiny dim" style="display:block">Birthday coupon · until '+fmtDate(cp.expiresOn)+(cp.note ? ' · '+esc(cp.note) : '')+'</span></span>'+
+          '<span class="chip" data-couponstate>Apply</span></button>').join('');
+    })()+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Discount</span><input class="inp" name="discount" type="number" inputmode="decimal" min="0" step="1" value="'+(p.discount||0)+'"></label>'+
+      '<label class="field"><span class="lab">Tip</span><input class="inp" name="tip" type="number" inputmode="decimal" min="0" step="1" value="'+(p.tip||0)+'"></label>'+
+    '</div>'+
+    '<span class="lab">Paid with</span><div class="picks" style="margin-bottom:14px">'+
+      PAY_METHODS.map(m => '<button class="pick" data-pm="'+m+'" aria-pressed="'+(p.method===m)+'">'+m+'</button>').join('')+'</div>'+
+    '<label class="check"><input type="checkbox" name="paid"'+(p.status==='paid'?' checked':'')+'>'+
+      '<span style="font-weight:600">Payment received</span></label>';
+
+  openSheet({
+    title:'Take payment',
+    body,
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save payment</button>',
+    onMount(root){
+      let method = p.method;
+      /* a coupon already spent on this appointment starts out applied */
+      let couponId = ((S.coupons||[]).find(cp => cp.apptId === a.id && cp.redeemedAt) || {}).id || null;
+      const originalCoupon = couponId;
+      const paintCoupons = () => $$('[data-coupon]', root).forEach(b => {
+        const on = b.dataset.coupon === couponId;
+        const chip = $('[data-couponstate]', b);
+        chip.textContent = on ? 'Applied' : 'Apply';
+        chip.className = 'chip' + (on ? ' st-completed' : '');
+      });
+      $$('[data-coupon]', root).forEach(b => b.onclick = () => {
+        const cp = (S.coupons||[]).find(x => x.id === b.dataset.coupon);
+        const dInp = $('[name="discount"]', root);
+        if (couponId === cp.id){ couponId = null; dInp.value = 0; }
+        else {
+          couponId = cp.id;
+          const pt = prods.reduce((t,x) => t + x.price*x.qty, 0);
+          const off = cp.type === 'amount' ? Math.min(Number(cp.value), sTotal + pt) : Math.round(sTotal * Number(cp.value)) / 100;
+          dInp.value = Math.round(off * 100) / 100;
+        }
+        paintCoupons(); recalc();
+      });
+      paintCoupons();
+      const recalc = () => {
+        const pt = prods.reduce((t,x) => t + x.price*x.qty, 0);
+        const d = Number($('[name="discount"]', root).value)||0, ti = Number($('[name="tip"]', root).value)||0;
+        $('#pt', root).textContent = money(pt);
+        $('#tt', root).textContent = money(Math.max(0, sTotal + pt - d + ti));
+      };
+      $$('[data-pp]', root).forEach(b => b.onclick = () => {
+        const pr = byId('products', b.dataset.pp);
+        const i = prods.findIndex(x => x.productId === pr.id);
+        if (i >= 0) prods.splice(i,1); else prods.push({productId:pr.id, name:pr.name, price:Number(pr.price)||0, qty:1});
+        b.setAttribute('aria-pressed', prods.some(x => x.productId === pr.id));
+        recalc();
+      });
+      $$('[data-pm]', root).forEach(b => b.onclick = () => {
+        method = b.dataset.pm;
+        $$('[data-pm]', root).forEach(x => x.setAttribute('aria-pressed', x.dataset.pm === method));
+      });
+      ['discount','tip'].forEach(n => $('[name="'+n+'"]', root).addEventListener('input', recalc));
+      recalc();
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-act="save"]', root).onclick = async () => {
+        /* settle the coupon with the server first: if the code was already
+           spent somewhere else, nothing gets saved and nothing double-counts */
+        if (couponId !== originalCoupon){
+          const btn = $('[data-act="save"]', root);
+          btn.disabled = true;
+          try {
+            await flushOutbox();
+            if (originalCoupon){
+              const r = await api('/api/coupons/'+originalCoupon, {method:'PATCH', body: JSON.stringify({apptId:null})});
+              S.coupons = S.coupons.map(x => x.id === r.id ? r : x);
+            }
+            if (couponId){
+              const r = await api('/api/coupons/'+couponId, {method:'PATCH', body: JSON.stringify({apptId:a.id})});
+              S.coupons = S.coupons.map(x => x.id === r.id ? r : x);
+            }
+          } catch(e){
+            btn.disabled = false;
+            if (String(e.message) !== 'signed out') toast(e.message);
+            return;
+          }
+        }
+        const before = (a.products||[]).map(x => x.productId);
+        a.products = prods;
+        a.payment = { discount:Number($('[name="discount"]', root).value)||0, tip:Number($('[name="tip"]', root).value)||0,
+          method, status: $('[name="paid"]', root).checked ? 'paid' : 'unpaid', paidAt: Date.now() };
+        if (a.status !== 'completed') a.status = 'completed';
+        upsert('appts', a);
+        prods.forEach(x => { if (!before.includes(x.productId)){ const pr = byId('products', x.productId);
+          if (pr){ pr.qty = Math.max(0, (Number(pr.qty)||0) - x.qty); upsert('products', pr); } } });
+        closeAllSheets(); draw(); toast(couponId && couponId !== originalCoupon ? 'Payment recorded — coupon used' : 'Payment recorded');
+      };
+    }
+  });
+}
+
+/* ---------- messaging ---------- */
+function messageSheet(c, a, kind, forceChannel){
+  if (!c) return;
+  const st = S.settings, tpl = st.tpl;
+  const whenText = (kind === 'night' || kind === 'r24') ? 'tomorrow' : kind === 'r2' ? 'in a couple of hours' : 'soon';
+  const vars = tplVars(c, a, {when: whenText});
+  const base = {confirm:'confirm', night:'night', dayof:'dayof', r2:'dayof', r24:'night', birthday:'birthday',
+    reschedule:'reschedule', cancel:'cancel', rebook:'rebook', followup:'rebook'}[kind] || 'confirm';
+  const smsKey = base + '_sms';
+  const emKey  = base + '_email';
+  const subjKey = emKey + '_subject';
+  const emailFirst = ['night','rebook','followup'].includes(kind);
+  const textable = canText(c);
+  let channel = forceChannel || (emailFirst && c.email ? 'email' : (textable ? 'sms' : 'email'));
+  if (channel === 'sms' && !textable) channel = 'email';
+  if (channel === 'email' && !c.email) channel = 'sms';
+
+  function bodyFor(ch){
+    return tidyMsg(ch === 'sms' ? render(tpl[smsKey], vars) : render(tpl[emKey], vars));
+  }
+  const titles = {confirm:'Send confirmation', night:'Night-before email', r24:'Send reminder', r2:'Send reminder',
+    reschedule:'Tell them it moved', cancel:'Send cancellation', followup:'Invite them back', rebook:'Time to rebook'};
+
+  openSheet({
+    title: titles[kind] || 'Send a message',
+    body:
+      '<div class="row" style="margin-bottom:14px">'+avatar(c,'sm')+'<span class="grow small"><strong>'+esc(fullName(c))+'</strong>'+
+        '<span class="tiny dim" style="display:block">'+esc(c.phone||'')+(c.phone&&c.email?' · ':'')+esc(c.email||'')+'</span></span></div>'+
+      '<div class="seg" style="margin-bottom:14px">'+
+        '<button data-ch="sms" aria-pressed="'+(channel==='sms')+'"'+(textable?'':' disabled style="opacity:.4"')+'>Text</button>'+
+        '<button data-ch="email" aria-pressed="'+(channel==='email')+'"'+(c.email?'':' disabled style="opacity:.4"')+'>Email</button></div>'+
+      (!textable && c.phone ? '<p class="tiny dim" style="margin:-6px 0 12px">Texting is off: '+esc(textStatus(c).label.toLowerCase())+'.</p>' : '')+
+      '<label class="field" id="subjwrap" style="'+(channel==='email'?'':'display:none')+'"><span class="lab">Subject</span>'+
+        '<input class="inp" name="subject" value="'+esc(render(tpl[subjKey], vars))+'"></label>'+
+      '<label class="field"><span class="lab">Message</span>'+
+        '<textarea class="inp" name="body" style="min-height:170px">'+esc(bodyFor(channel))+'</textarea></label>'+
+      '<p class="tiny dim">Sent straight from '+(channel === 'email' ? 'your salon email address' : 'your salon number')+'.</p>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="send">'+svg('send')+'Send now</button>',
+    onMount(root){
+      const ta = $('[name="body"]', root);
+      $$('[data-ch]', root).forEach(b => b.onclick = () => {
+        if (b.hasAttribute('disabled')) return;
+        channel = b.dataset.ch;
+        $$('[data-ch]', root).forEach(x => x.setAttribute('aria-pressed', x.dataset.ch === channel));
+        $('#subjwrap', root).style.display = channel === 'email' ? '' : 'none';
+        ta.value = bodyFor(channel);
+      });
+      $('[data-act="cancel"]', root).onclick = () => { sendQueue = []; closeSheet(); };
+      const btn = $('[data-act="send"]', root);
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = 'Sending…';
+        try {
+          await api('/api/messages/send', {method:'POST', body: JSON.stringify({
+            customerId: c.id, apptId: a ? a.id : null, kind, channel,
+            subject: channel === 'email' ? $('[name="subject"]', root).value : '',
+            body: ta.value
+          })});
+          await loadState();
+          closeAllSheets(); draw();
+          if (sendQueue.length){ toast('Sent — '+sendQueue.length+' to go'); setTimeout(nextInQueue, 340); }
+          else toast(channel === 'email' ? 'Email sent' : 'Text sent');
+        } catch(e){
+          if (String(e.message) === 'signed out') return;
+          toast(e.message);
+          btn.disabled = false; btn.innerHTML = svg('send')+'Send now';
+        }
+      };
+    }
+  });
+}
+
+/* ---------- working through the queue ---------- */
+let sendQueue = [];
+function startSendAll(){
+  sendQueue = dueReminders().map(r => ({apptId: r.a ? r.a.id : null, custId: r.c.id, kind: r.kind}));
+  if (!sendQueue.length){ toast('Nothing due'); return; }
+  nextInQueue();
+}
+function nextInQueue(){
+  const job = sendQueue.shift();
+  if (!job) return;
+  const c = cust(job.custId);
+  if (!c) return nextInQueue();
+  messageSheet(c, job.apptId ? byId('appts', job.apptId) : null, job.kind);
+}
+
+/* ============================================================
+   Event wiring
+   ============================================================ */
+document.addEventListener('click', e => {
+  const t = e.target;
+  const hit = sel => t.closest('['+sel+']');
+  let el;
+
+  if ((el = hit('data-new'))){
+    const k = el.dataset.new;
+    if (k === 'cust') customerForm(null);
+    else if (k === 'svc') serviceForm(null);
+    else if (k === 'prod') productForm(null);
+    else if (k === 'appt') apptForm(null, Object.assign({},
+      el.dataset.cust ? {customerId: el.dataset.cust} : {},
+      el.dataset.date ? {date: el.dataset.date} : {}));
+    return;
+  }
+  if ((el = hit('data-appt'))){ apptSheet(el.dataset.appt); return; }
+  if ((el = hit('data-cust'))){ custTab = 'overview'; go('customer', el.dataset.cust); return; }
+  if ((el = hit('data-editcust'))){ customerForm(el.dataset.editcust); return; }
+  if ((el = hit('data-delcust'))){
+    const id = el.dataset.delcust, c = cust(id);
+    confirmSheet('Delete '+fullName(c)+'?', 'Their notes and appointment history go too. This can\'t be undone.', 'Delete', () => {
+      S.appts.filter(a => a.customerId === id).forEach(a => remove('appts', a.id));
+      S.notes.filter(n => n.customerId === id).forEach(n => remove('notes', n.id));
+      remove('customers', id); toast('Client deleted'); go('customers');
+    }, true); return;
+  }
+  if ((el = hit('data-custtab'))){ custTab = el.dataset.custtab; draw(); return; }
+  if ((el = hit('data-sort'))){ custSort = el.dataset.sort; draw(); return; }
+  if ((el = hit('data-svc'))){ serviceForm(el.dataset.svc); return; }
+  if ((el = hit('data-prod'))){ productForm(el.dataset.prod); return; }
+  if (hit('data-seed')){ seedServices(); return; }
+  if ((el = hit('data-calmode'))){ calMode = el.dataset.calmode; draw(); return; }
+  if ((el = hit('data-calnav'))){
+    const d = Number(el.dataset.calnav);
+    if (d === 0) calDate = todayISO();
+    else if (calMode === 'day') calDate = addDays(calDate, d);
+    else if (calMode === 'week') calDate = addDays(calDate, 7*d);
+    else { const x = fromISO(calDate); x.setDate(1); x.setMonth(x.getMonth()+d); calDate = iso(x); }
+    draw(); return;
+  }
+  if ((el = hit('data-calday'))){ calDate = el.dataset.calday; calMode = 'day'; draw(); return; }
+  if ((el = hit('data-goday'))){ calDate = el.dataset.goday; calMode = 'day'; go('calendar'); return; }
+  if ((el = hit('data-shoot'))){
+    const [cid, tag, apptId] = el.dataset.shoot.split('|');
+    shoot(cid, tag, apptId || null);
+    return;
+  }
+  if ((el = hit('data-compare'))){
+    const [b, a] = el.dataset.compare.split('|');
+    compareSheet(b, a);
+    return;
+  }
+  if ((el = hit('data-addphoto'))){ pickPhotos(el.dataset.addphoto, el.dataset.apptPhoto || null); return; }
+  if ((el = hit('data-photo'))){ photoSheet(el.dataset.photo); return; }
+  if ((el = hit('data-delphoto'))){
+    const id = el.dataset.delphoto;
+    confirmSheet('Delete this photo?', 'It goes for good, along with the file.', 'Delete', async () => {
+      try {
+        await api('/api/photos/'+id, {method:'DELETE'});
+        S.photos = S.photos.filter(p => p.id !== id);
+        closeAllSheets(); draw(); toast('Photo deleted');
+      } catch(e){ if (String(e.message) !== 'signed out') toast(e.message); }
+    }, true);
+    return;
+  }
+  if ((el = hit('data-addnote'))){ noteForm(el.dataset.addnote, null, el.dataset.apptNote || null); return; }
+  if ((el = hit('data-editnote'))){ const n = byId('notes', el.dataset.editnote); noteForm(n.customerId, n.id); return; }
+  if ((el = hit('data-delnote'))){
+    const id = el.dataset.delnote;
+    confirmSheet('Delete this note?','It won\'t be recoverable.','Delete', () => { remove('notes', id); toast('Note deleted'); draw(); }, true);
+    return;
+  }
+  if ((el = hit('data-setstatus'))){ const [id, st] = el.dataset.setstatus.split('|'); setStatus(id, st); return; }
+  if ((el = hit('data-editappt'))){ closeSheet(); apptForm(el.dataset.editappt); return; }
+  if ((el = hit('data-delappt'))){
+    const id = el.dataset.delappt;
+    confirmSheet('Delete this appointment?','Cancelling instead keeps it in the history.','Delete', () => {
+      remove('appts', id); closeAllSheets(); toast('Appointment deleted'); draw(); }, true);
+    return;
+  }
+  if ((el = hit('data-pay'))){ closeSheet(); paymentSheet(el.dataset.pay); return; }
+  if ((el = hit('data-msg'))){
+    const [id, ch] = el.dataset.msg.split('|');
+    const a = byId('appts', id);
+    messageSheet(cust(a.customerId), a, a.status === 'cancelled' ? 'cancel' : 'confirm', ch);
+    return;
+  }
+  if ((el = hit('data-remind'))){
+    sendQueue = [];
+    const parts = el.dataset.remind.split('|');
+    const a = parts[0] === '-' ? null : byId('appts', parts[0]);
+    messageSheet(a ? cust(a.customerId) : cust(parts[2]), a, parts[1]);
+    return;
+  }
+  if (hit('data-sendall')){ startSendAll(); return; }
+  if ((el = hit('data-retry'))){
+    const m = byId('msgs', el.dataset.retry);
+    if (m) messageSheet(cust(m.customerId), m.apptId ? byId('appts', m.apptId) : null, m.kind, m.channel);
+    return;
+  }
+  if (hit('data-logout')){
+    confirmSheet('Sign out?', 'You\'ll need your password to get back in.', 'Sign out', async () => {
+      await fetch('/api/auth/logout', {method:'POST', credentials:'same-origin'});
+      window.location.href = '/login';
+    });
+    return;
+  }
+  if ((el = hit('data-followup'))){ messageSheet(cust(el.dataset.followup), null, 'followup'); return; }
+  if ((el = hit('data-msgcust'))){ messageSheet(cust(el.dataset.msgcust), nextVisit(el.dataset.msgcust), 'confirm', 'sms'); return; }
+  if ((el = hit('data-mailcust'))){ messageSheet(cust(el.dataset.mailcust), nextVisit(el.dataset.mailcust), 'confirm', 'email'); return; }
+  if ((el = hit('data-ics'))){
+    const a = byId('appts', el.dataset.ics);
+    download('appointment-'+a.date+'.ics', icsFor([a]), 'text/calendar');
+    toast('Open the file to add it'); return;
+  }
+  if (hit('data-exporticsall')){
+    const list = upcomingAppts();
+    if (!list.length){ toast('Nothing upcoming to export'); return; }
+    download('appointments-'+todayISO()+'.ics', icsFor(list), 'text/calendar'); toast('Downloaded'); return;
+  }
+  if ((el = hit('data-export'))){
+    if (el.dataset.export === 'csv') exportData('appts'); else exportData(el.dataset.export);
+    return;
+  }
+  if (hit('data-import')){ $('#importfile').click(); return; }
+  if (hit('data-editbiz')){ bizForm(); return; }
+  if ((el = hit('data-hours'))){ hoursForm(Number(el.dataset.hours)); return; }
+  if (hit('data-closures')){ closuresForm(); return; }
+  if (hit('data-slot')){ slotForm(); return; }
+  if (hit('data-templates')){ templatesForm(); return; }
+  if ((el = hit('data-rep'))){ repRange = el.dataset.rep; draw(); return; }
+  if ((el = hit('data-setheme'))){ setTheme(el.dataset.setheme); return; }
+  if (hit('data-asktexts')){ custSort = 'textok'; custQuery = ''; go('customers'); return; }
+  if ((el = hit('data-coupontype'))){
+    S.settings.coupon = Object.assign({}, S.settings.coupon, {type: el.dataset.coupontype});
+    saveSettings(); draw(); return;
+  }
+  if ((el = hit('data-setpalette'))){
+    S.settings.palette = el.dataset.setpalette;
+    applyPalette(S.settings.palette); saveSettings(); draw();
+    toast(PALETTES[S.settings.palette].label);
+    return;
+  }
+});
+
+function wireView(){
+  const q = $('#custq');
+  if (q) q.addEventListener('input', () => { custQuery = q.value; $('#custlist').innerHTML = custListHTML(); });
+  $$('[data-notifytoggle]').forEach(el => el.addEventListener('change', () => {
+    S.settings.notify[el.dataset.notifytoggle] = el.checked; saveSettings();
+  }));
+  $$('[data-notify]').forEach(el => el.addEventListener('change', () => {
+    S.settings.notify[el.dataset.notify] = Number(el.value) || 1; saveSettings();
+  }));
+  const nh = $('[data-nighthour]');
+  if (nh) nh.addEventListener('change', () => { S.settings.nightHour = Number(nh.value); saveSettings(); draw(); });
+  const rd = $('[data-rebookdays]');
+  if (rd) rd.addEventListener('change', () => {
+    S.settings.autoDefaults = Object.assign({}, S.settings.autoDefaults, {rebookDays: clamp(Number(rd.value)||60, 7, 365)});
+    saveSettings();
+  });
+  const bh = $('[data-bdayhour]');
+  if (bh) bh.addEventListener('change', () => { S.settings.birthdayHour = Number(bh.value); saveSettings(); });
+  $$('[data-couponfield]').forEach(el => el.addEventListener('change', () => {
+    const k = el.dataset.couponfield;
+    S.settings.coupon = Object.assign({}, S.settings.coupon);
+    S.settings.coupon[k] = k === 'on' ? el.checked : k === 'note' ? el.value.trim() : Number(el.value) || 0;
+    saveSettings(); draw();
+  }));
+  const fw = $('[data-followweeks]');
+  if (fw) fw.addEventListener('change', () => { S.settings.followupWeeks = Number(fw.value)||6; saveSettings(); });
+  const cur = $('[data-currency]');
+  if (cur) cur.addEventListener('change', () => { S.settings.currency = cur.value.trim() || '$'; saveSettings(); draw(); });
+  const imp = $('#importfile');
+  if (imp) imp.addEventListener('change', e => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ''; });
+  if (route === 'calendar' && calMode !== 'month') wireDrag();
+  if (route === 'calendar' && calMode !== 'month'){
+    const body = $('.gc-body');
+    if (body){ const lo = Number($('.grid-cal').dataset.lo); body.scrollTop = Math.max(0, ((nowMins()-60-lo)/60)*HOUR_PX); }
+  }
+}
+
+/* ---------- theme & brand ---------- */
+function setTheme(t){
+  S.settings.theme = t; saveSettings();
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  draw();
+}
+function applyBrand(){
+  applyPalette(S.settings.palette);
+  const n = (S.settings.biz.name || 'Chair & Comb').trim();
+  $('#brandname').textContent = n;
+  const letter = (n[0] || 'C').toUpperCase();
+  $('#brandmark').textContent = letter; $('#mbrand').textContent = letter;
+  document.title = n + ' — salon manager';
+}
+$('#themebtn').addEventListener('click', () => {
+  const order = ['auto','light','dark'];
+  setTheme(order[(order.indexOf(S.settings.theme || 'auto') + 1) % 3]);
+  toast('Theme: ' + (S.settings.theme));
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+(async function boot(){
+  lsLoadAll();
+  if (S.settings.theme && S.settings.theme !== 'auto') document.documentElement.setAttribute('data-theme', S.settings.theme);
+  applyBrand();
+  draw();
+
+  try {
+    await loadState();
+    if (S.settings.theme && S.settings.theme !== 'auto') document.documentElement.setAttribute('data-theme', S.settings.theme);
+    applyBrand();
+    draw();
+  } catch(e){
+    if (String(e.message) !== 'signed out') toast('Can\'t reach the server — showing your last copy');
+  }
+
+  if (!S.services.length && !S.customers.length){
+    setTimeout(() => {
+      if (S.services.length) return;
+      openSheet({
+        title:'Welcome',
+        body:'<p class="small">This runs your chair: clients, bookings, the calendar, takings, and the emails and texts that go with them.</p>'+
+          '<p class="small" style="margin-top:10px">Start with a service menu — you can rename, reprice or delete anything afterwards.</p>',
+        foot:'<button class="btn ghost" data-act="skip">I\'ll add my own</button><button class="btn primary" data-act="seed">Use a starter menu</button>',
+        onMount(root){
+          $('[data-act="skip"]', root).onclick = () => { S.settings.seeded = true; saveSettings(); closeSheet(); };
+          $('[data-act="seed"]', root).onclick = () => { closeSheet(); seedServices(); };
+        }
+      });
+    }, 600);
+  }
+
+  /* keep the clock honest, and pick up anything done on another device */
+  setInterval(() => { if (route === 'dashboard' || route === 'calendar') draw(); }, 120000);
+  setInterval(() => {
+    if (sheetStack.length) return;
+    loadState().then(draw).catch(() => {});
+  }, 300000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !sheetStack.length) loadState().then(draw).catch(() => {});
+  });
+  window.addEventListener('online', flushOutbox);
+})();
+</script>
+</body>
+</html>
