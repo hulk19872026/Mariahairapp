@@ -235,6 +235,10 @@ model Settings {
 
   templates Json @default("{}")
 
+  // settings the app screen keeps that nothing on the server acts on
+  // (theme, booking buffer, master send toggles, logo …)
+  extra Json @default("{}")
+
   updatedAt DateTime @updatedAt
 }
 

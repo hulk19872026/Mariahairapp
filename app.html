@@ -2476,7 +2476,9 @@ function viewSettings(){
     '<input type="file" id="importfile" accept="application/json,.json" hidden>'+
   '</div></div>';
 
-  s += '<div class="sec"><button class="btn ghost block" data-logout="1">Sign out</button></div>';
+  s += '<div class="sec"><div class="sec-head"><h2>Account</h2></div>'+
+    '<a class="btn ghost block" href="/setup" style="margin-bottom:10px">Users &amp; password</a>'+
+    '<button class="btn ghost block" data-logout="1">Sign out</button></div>';
   s += '<p class="tiny dim center" style="margin:26px 0 10px">Chair &amp; Comb · built for one pair of hands</p></div>';
   return s;
 }
