@@ -1,0 +1,274 @@
+// Chair & Comb — database schema
+//
+// One stylist, one salon. Every table hangs off the work that actually
+// happens at the chair: a client, an appointment, and the messages that
+// went out about it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  first     String   @default("")
+  last      String   @default("")
+  phone     String   @default("")
+  email     String   @default("")
+  dob       String   @default("")
+  address   String   @default("")
+  contact   String   @default("Text") // preferred contact method
+  photo     String   @default("") @db.Text // small data: URI, optional
+
+  // hair record
+  hairType     String @default("")
+  hairStyle    String @default("")
+  formula      String @default("") @db.Text
+  productsUsed String @default("")
+  allergies    String @default("")
+  instructions String @default("") @db.Text
+
+  // per-client automation — these are the switches on the client's profile
+  autoNightBefore Boolean @default(true)
+  autoRebook      Boolean @default(true)
+  rebookDays      Int     @default(60)
+  autoBirthday    Boolean @default(true)
+
+  // Text consent. US carriers (and the TCPA) require a client's agreement
+  // before a business texts them, so nothing is texted until this is set.
+  // It starts false and is only ever set by a deliberate act: the stylist
+  // ticking the box after asking, or the client texting START.
+  smsConsent    Boolean   @default(false)
+  smsConsentAt  DateTime?
+  smsConsentHow String    @default("") // "In person" | "Paper form" | "Texted START"
+
+  // STOP replies flip smsOptOut, and nothing is sent to that number again.
+  smsOptOut   Boolean @default(false)
+  emailOptOut Boolean @default(false)
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  notes        Note[]
+  messages     MessageLog[]
+  photos       Photo[]
+  coupons      Coupon[]
+
+  @@index([last, first])
+  @@index([phone])
+  @@index([email])
+}
+
+model Service {
+  id       String  @id @default(cuid())
+  name     String
+  desc     String  @default("")
+  price    Decimal @default(0) @db.Decimal(10, 2)
+  duration Int     @default(45) // minutes
+  category String  @default("Other")
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id       String  @id @default(cuid())
+  name     String
+  brand    String  @default("")
+  category String  @default("")
+  cost     Decimal @default(0) @db.Decimal(10, 2)
+  price    Decimal @default(0) @db.Decimal(10, 2)
+  qty      Int     @default(0)
+  minQty   Int     @default(0)
+  sku      String  @default("")
+  notes    String  @default("") @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Appointment {
+  id         String   @id @default(cuid())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+
+  date       String   // local calendar date, YYYY-MM-DD
+  start      Int      // minutes from local midnight
+  duration   Int      @default(0) // 0 = add up the services
+  serviceIds String[] @default([])
+  status     String   @default("scheduled") // scheduled | confirmed | completed | cancelled | noshow
+  notes      String   @default("") @db.Text
+
+  priceOverride Decimal? @db.Decimal(10, 2)
+
+  // payment, recorded when the appointment is marked complete
+  products      Json     @default("[]")
+  discount      Decimal  @default(0) @db.Decimal(10, 2)
+  tip           Decimal  @default(0) @db.Decimal(10, 2)
+  payMethod     String   @default("")
+  payStatus     String   @default("unpaid")
+  paidAt        DateTime?
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  notesList Note[]
+  messages  MessageLog[]
+  photos    Photo[]
+  coupons   Coupon[]
+
+  @@index([date, start])
+  @@index([customerId, date])
+  @@index([status, date])
+}
+
+model Note {
+  id            String       @id @default(cuid())
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId    String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+  text          String       @db.Text
+  tag           String       @default("")
+  createdAt     DateTime     @default(now())
+
+  @@index([customerId, createdAt])
+}
+
+// Every send attempt, successful or not. `dedupeKey` is what stops the
+// scheduler sending the same reminder twice when it runs every hour.
+model MessageLog {
+  id            String       @id @default(cuid())
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId    String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+
+  kind      String // confirm | night | dayof | rebook | reschedule | cancel | manual
+  channel   String // email | sms
+  to        String
+  subject   String @default("")
+  body      String @db.Text
+
+  status     String  @default("queued") // queued | sent | failed | skipped
+  providerId String  @default("") // Resend id or Twilio SID
+  error      String  @default("") @db.Text
+  auto       Boolean @default(true) // sent by the scheduler rather than by hand
+
+  dedupeKey String   @unique
+  createdAt DateTime @default(now())
+  sentAt    DateTime?
+
+  @@index([customerId, kind, createdAt])
+  @@index([createdAt])
+}
+
+// Hair photos. The bytes live in object storage (a Railway volume, or an
+// S3-compatible bucket); only the pointer and the caption live here, so the
+// database stays small enough to back up in seconds.
+model Photo {
+  id            String       @id @default(cuid())
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId    String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+
+  tag     String @default("") // before | after | formula | inspiration | ""
+  caption String @default("")
+
+  fullKey  String // storage key for the full-size image
+  thumbKey String // storage key for the grid thumbnail
+  mime     String @default("image/jpeg")
+  width    Int    @default(0)
+  height   Int    @default(0)
+  bytes    Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([appointmentId])
+}
+
+model Settings {
+  id       String @id @default("business")
+  timezone String @default("America/New_York")
+  currency String @default("$")
+  palette  String @default("fuchsia") // fuchsia | violet | lagoon | sunset | plum
+
+  bizName  String @default("Chair & Comb")
+  stylist  String @default("")
+  phone    String @default("")
+  email    String @default("")
+  address  String @default("")
+  website  String @default("")
+
+  // opening hours, closures and booking interval, kept as JSON because the
+  // shape is small, read whole, and never queried across rows
+  hours    Json @default("{}")
+  closures Json @default("[]")
+  slot     Int  @default(15)
+
+  // master switches — a client's own settings can only narrow these
+  sendConfirm Boolean @default(true)
+  sendNight   Boolean @default(true)
+  sendDayOf   Boolean @default(true)
+  sendRebook  Boolean @default(true)
+
+  sendBirthday Boolean @default(true)
+  birthdayHour Int     @default(9) // local hour birthday wishes go out
+
+  // the birthday coupon — off by default, so nothing is promised by accident
+  couponOn    Boolean @default(false)
+  couponType  String  @default("percent") // percent | amount
+  couponValue Decimal @default(15) @db.Decimal(10, 2)
+  couponDays  Int     @default(30) // how long it stays valid
+  couponNote  String  @default("")  // fine print, e.g. "Not valid with other offers"
+
+  nightHour     Int @default(19) // local hour the night-before email goes out
+  dayOfHours    Int @default(2)  // hours before the appointment for the text
+  rebookDays    Int @default(60) // default for new clients
+  followupWeeks Int @default(6)
+
+  templates Json @default("{}")
+
+  updatedAt DateTime @updatedAt
+}
+
+// A one-off discount code, issued to one client. Birthday coupons are issued
+// at most once per client per year — the unique index guarantees it even if
+// the scheduler runs twice at once.
+model Coupon {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  kind       String   @default("birthday")
+  year       Int
+  type       String   // percent | amount
+  value      Decimal  @db.Decimal(10, 2)
+  note       String   @default("")
+  expiresOn  String   // local date, YYYY-MM-DD, last day it can be used
+
+  redeemedAt    DateTime?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([customerId, kind, year])
+  @@index([customerId])
+}
+
+// A run of the scheduler, so you can see it is actually firing.
+model CronRun {
+  id        String   @id @default(cuid())
+  startedAt DateTime @default(now())
+  sent      Int      @default(0)
+  failed    Int      @default(0)
+  skipped   Int      @default(0)
+  detail    Json     @default("{}")
+}
