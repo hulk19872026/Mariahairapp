@@ -1646,6 +1646,13 @@ function viewCustomer(id){
     '<div class="stat" style="padding:10px"><div class="k">Last in</div><div class="v num" style="font-size:1.15rem">'+(lv ? agoText(lv.date).replace(' ago','') : '—')+'</div></div>'+
   '</div>';
   if (nv) s += '<p class="small" style="margin-top:12px"><strong>Next:</strong> '+fmtDate(nv.date,'rel')+' at '+fmtTime(nv.start)+' — '+esc(serviceNames(nv))+'</p>';
+  if (custTab !== 'photos'){
+    /* the camera is one tap away from anywhere on the client's page */
+    const pc = custPhotos(id).length;
+    s += '<hr class="rule">'+shootBar(c.id, null)+
+      '<p class="tiny dim center">Saved to '+esc(c.first || 'their')+'\'s file. '+
+      (pc ? '<button class="tiny" data-custtab="photos" style="color:var(--plum);font-weight:700;text-decoration:underline">See all '+pc+' photo'+(pc>1?'s':'')+'</button>' : '')+'</p>';
+  }
   s += '</div>';
 
   s += '<div class="tabs" style="margin-top:18px">'+
@@ -1694,9 +1701,7 @@ function viewCustomer(id){
   if (custTab === 'photos'){
     const pics = custPhotos(id);
     const visit = todaysAppt(c.id);
-    s += '<div class="shoot">'+
-      '<button class="sb" data-shoot="'+c.id+'|Before|">'+svg('camera')+'Before<small>opens camera</small></button>'+
-      '<button class="sa" data-shoot="'+c.id+'|After|">'+svg('camera')+'After<small>opens camera</small></button></div>';
+    s += shootBar(c.id, null);
     s += '<p class="tiny dim center" style="margin-bottom:16px">'+
       (visit ? 'Filed under today\'s '+esc(serviceNames(visit))+' at '+fmtTime(visit.start)+'. ' : 'Tagged and saved to '+esc(c.first || 'their')+'\'s file. ')+
       '<button class="tiny" data-addphoto="'+c.id+'" style="color:var(--plum);font-weight:700;text-decoration:underline">Choose from library instead</button></p>';
@@ -1936,35 +1941,62 @@ async function uploadPhotos(customerId, files, apptId, tag){
     : done + ' photo' + (done>1?'s':'') + ' added' + (failed ? ', ' + failed + ' failed' : ''));
 }
 
-/* Straight to the rear camera, one shot, tagged and filed. On a phone this
-   skips the photo library entirely. */
-function shoot(customerId, tag, apptId){
-  const visit = apptId || (todaysAppt(customerId) || {}).id || null;
+/* A hidden file input: with `camera` it goes straight to the rear camera on a
+   phone; otherwise it opens the photo library (or a file picker on a computer). */
+function pickImages(opts, onFiles){
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
-  input.setAttribute('capture', 'environment');
+  if (opts.camera) input.setAttribute('capture', 'environment');
+  if (opts.multiple) input.multiple = true;
   input.style.display = 'none';
   document.body.appendChild(input);
   input.onchange = () => {
     const files = input.files;
     input.remove();
-    if (files && files.length) uploadPhotos(customerId, files, visit, tag);
+    if (files && files.length) onFiles(files);
   };
   input.click();
 }
 
+/* Before / After: ask whether to take a photo now or upload one already on
+   the device. Either way it's tagged and filed under the visit. */
+function shoot(customerId, tag, apptId){
+  const c = cust(customerId);
+  const visit = apptId || (todaysAppt(customerId) || {}).id || null;
+  const a = visit ? byId('appts', visit) : null;
+  const where = a ? 'Filed under '+fmtDate(a.date,'rel').toLowerCase()+'\'s '+serviceNames(a)+'.'
+                  : 'Saved to '+esc(c ? (c.first || fullName(c)) : 'the client')+'\'s file.';
+  openSheet({
+    title: tag+' photo',
+    body: '<p class="small dim" style="margin-bottom:12px">'+where+'</p>'+
+      '<div class="list card">'+
+        '<button class="item" data-src="camera">'+svg('camera')+'<span class="grow"><span class="nm">Take a photo</span>'+
+          '<span class="tiny dim" style="display:block">Opens the camera</span></span>'+svg('chev')+'</button>'+
+        '<button class="item" data-src="library">'+svg('dl')+'<span class="grow"><span class="nm">Upload from library</span>'+
+          '<span class="tiny dim" style="display:block">Pick one or more pictures you already have</span></span>'+svg('chev')+'</button>'+
+      '</div>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button>',
+    onMount(root){
+      $$('.item svg', root).forEach(s => { s.style.width='22px'; s.style.height='22px'; s.style.stroke='var(--plum)'; s.style.fill='none'; s.style.strokeWidth='1.8'; });
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $('[data-src="camera"]', root).onclick = () => { closeSheet(); pickImages({camera:true}, files => uploadPhotos(customerId, files, visit, tag)); };
+      $('[data-src="library"]', root).onclick = () => { closeSheet(); pickImages({multiple:true}, files => uploadPhotos(customerId, files, visit, tag)); };
+    }
+  });
+}
+
 function pickPhotos(customerId, apptId){
   apptId = apptId || (todaysAppt(customerId) || {}).id || null;
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'image/*'; input.multiple = true;
-  input.style.display = 'none';
-  document.body.appendChild(input);
-  input.onchange = () => {
-    const files = input.files;
-    input.remove();
-    if (files && files.length) uploadPhotos(customerId, files, apptId || null, null);
-  };
-  input.click();
+  pickImages({multiple:true}, files => uploadPhotos(customerId, files, apptId || null, null));
+}
+
+/* the Before / After buttons, used on the client page and the appointment sheet */
+function shootBar(customerId, apptId){
+  const k = customerId+'|';
+  const v = apptId || '';
+  return '<div class="shoot">'+
+    '<button class="sb" data-shoot="'+k+'Before|'+v+'">'+svg('camera')+'Before<small>take or upload</small></button>'+
+    '<button class="sa" data-shoot="'+k+'After|'+v+'">'+svg('camera')+'After<small>take or upload</small></button></div>';
 }
 
 /* One before-and-after per visit: the latest Before and latest After taken
@@ -2954,9 +2986,7 @@ function apptSheet(id){
       const pics = S.photos.filter(p => p.apptId === a.id);
       const pair = visitPairs(a.customerId).find(g => g.apptId === a.id);
       let h = '<hr class="rule"><span class="lab">Photos</span>'+
-        '<div class="shoot" style="margin-top:6px">'+
-          '<button class="sb" data-shoot="'+a.customerId+'|Before|'+a.id+'">'+svg('camera')+'Before</button>'+
-          '<button class="sa" data-shoot="'+a.customerId+'|After|'+a.id+'">'+svg('camera')+'After</button></div>';
+        '<div style="margin-top:6px">'+shootBar(a.customerId, a.id)+'</div>';
       if (pair) h += pairCard(pair, a.customerId);
       const others = pics.filter(p => !pair || (p.id !== (pair.before||{}).id && p.id !== (pair.after||{}).id));
       if (others.length) h += '<div class="pgrid" style="margin-bottom:6px">'+others.map(photoCell).join('')+'</div>';
