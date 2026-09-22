@@ -266,12 +266,30 @@ select.inp{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.
   padding:4px 3px 3px; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:.8rem; font-weight:600}
 .month .day.off{opacity:.38}
 .month .day.today{border-color:var(--plum); box-shadow:inset 0 0 0 1px var(--plum)}
-.month .day.sel{background:var(--plum); color:#fff; border-color:var(--plum)}
-:root[data-theme="dark"] .month .day.sel{color:#1B1420}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .month .day.sel{color:#1B1420}}
+.month .day .dn{width:24px; height:24px; line-height:24px; text-align:center; border-radius:99px; flex:none}
+.month .day.sel{background:color-mix(in srgb,var(--plum) 10%,var(--surface)); border-color:var(--plum); box-shadow:inset 0 0 0 1.5px var(--plum)}
+.month .day.sel .dn{background:var(--plum); color:#fff}
+:root[data-theme="dark"] .month .day.sel .dn{color:#1B1420}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .month .day.sel .dn{color:#1B1420}}
 .month .dots{display:flex; gap:2px; flex-wrap:wrap; justify-content:center}
 .month .dots i{width:5px; height:5px; border-radius:99px; background:var(--plum)}
-.month .day.sel .dots i{background:currentColor}
+.month .cnt{display:none}
+/* on a tablet or desktop the cells are big enough to show who is booked */
+.month .evs{display:none}
+.mev{display:block; font-size:.68rem; font-weight:600; line-height:1.25; padding:2px 5px; border-radius:6px; text-align:left;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text);
+  border-left:3px solid var(--plum); background:color-mix(in srgb,var(--plum) 12%,var(--surface))}
+.mev.s-confirmed{border-left-color:var(--teal); background:color-mix(in srgb,var(--teal) 14%,var(--surface))}
+.mev.s-completed{border-left-color:var(--brass); background:color-mix(in srgb,var(--brass) 16%,var(--surface))}
+.mev.s-noshow{border-left-color:var(--amber); background:color-mix(in srgb,var(--amber) 15%,var(--surface))}
+.mev.more{border-left-color:transparent; background:none; color:var(--dim); font-weight:600}
+@media (min-width:860px){
+  .month{gap:6px}
+  .month .day{aspect-ratio:auto; min-height:104px; align-items:stretch; padding:6px; gap:4px}
+  .month .day .dn{align-self:flex-end}
+  .month .dots{display:none}
+  .month .evs{display:flex; flex-direction:column; gap:2px; width:100%}
+}
 
 .grid-cal{display:grid; border:1px solid var(--border); border-radius:var(--r); overflow:hidden; background:var(--surface); position:relative}
 .gc-head{display:grid; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--surface); z-index:2}
@@ -1356,7 +1374,7 @@ function viewCalendar(){
   if (calMode === 'month') s += monthGrid();
   else s += timeGrid(calMode === 'day' ? [calDate] : weekDates());
   s += '<p class="tiny dim center" style="margin-top:10px">'+(calMode==='month'
-      ? 'Tap a day to open it.' : 'Tap an appointment to open it. Drag it to a new time.')+'</p>';
+      ? 'Tap a day to see it below. Tap it again to open the day.' : 'Tap an appointment to open it. Drag it to a new time.')+'</p>';
   s += '</div>';
   return s;
 }
@@ -1379,15 +1397,28 @@ function monthGrid(){
   while (cells.length % 7) { const last = fromISO(cells[cells.length-1].iso); last.setDate(last.getDate()+1); cells.push({iso:iso(last), off:true}); }
 
   let s = '<div class="month">'+['S','M','T','W','T','F','S'].map(x => '<div class="dow">'+x+'</div>').join('');
+  const MAX_EV = 3;
   cells.forEach(c => {
     const list = apptsOn(c.iso).filter(ACTIVE);
-    const cls = ['day']; if (c.off) cls.push('off'); if (c.iso === t) cls.push('today'); if (c.iso === calDate) cls.push('sel');
-    s += '<button class="'+cls.join(' ')+'" data-calday="'+c.iso+'">'+fromISO(c.iso).getDate()+
-      '<span class="dots">'+list.slice(0,4).map(() => '<i></i>').join('')+'</span></button>';
+    const cls = ['day']; if (c.off) cls.push('off'); if (c.iso === t) cls.push('today'); if (c.iso === calDate) cls.push('sel'); if (list.length) cls.push('has');
+    const label = fmtDate(c.iso,'full')+(list.length ? ', '+list.length+' appointment'+(list.length>1?'s':'') : '');
+    s += '<button class="'+cls.join(' ')+'" data-calday="'+c.iso+'" aria-label="'+esc(label)+'" aria-pressed="'+(c.iso===calDate)+'">'+
+      '<span class="dn">'+fromISO(c.iso).getDate()+'</span>'+
+      '<span class="dots">'+list.slice(0,4).map(() => '<i></i>').join('')+'</span>'+
+      '<span class="evs">'+list.slice(0, MAX_EV).map(a => {
+        const cu = cust(a.customerId);
+        const who = cu ? (cu.first || fullName(cu)) : 'Client';
+        return '<span class="mev s-'+a.status+'" title="'+esc(fmtTime(a.start)+' '+fullName(cu)+' · '+serviceNames(a))+'">'+
+          fmtTime(a.start)+' '+esc(who)+'</span>';
+      }).join('')+
+      (list.length > MAX_EV ? '<span class="mev more">+'+(list.length-MAX_EV)+' more</span>' : '')+
+      '</span></button>';
   });
   s += '</div>';
   const list = apptsOn(calDate);
-  s += '<div class="sec"><div class="sec-head"><h2>'+fmtDate(calDate,'long')+'</h2></div>';
+  s += '<div class="sec" id="daylist"><div class="sec-head"><h2>'+fmtDate(calDate,'long')+'</h2>'+
+    (list.length ? '<span class="small dim">'+list.length+' booked</span>' : '')+
+    '<span class="grow"></span><button class="btn sm ghost" data-openday="'+calDate+'">Open day</button></div>';
   s += list.length ? '<div class="card list">'+list.map(apptRow).join('')+'</div>'
     : '<div class="card empty"><p class="small">Nothing booked.</p><button class="btn primary" data-new="appt" data-date="'+calDate+'">'+svg('plus')+'Book this day</button></div>';
   s += '</div>';
@@ -3215,7 +3246,18 @@ document.addEventListener('click', e => {
     else { const x = fromISO(calDate); x.setDate(1); x.setMonth(x.getMonth()+d); calDate = iso(x); }
     draw(); return;
   }
-  if ((el = hit('data-calday'))){ calDate = el.dataset.calday; calMode = 'day'; draw(); return; }
+  if ((el = hit('data-calday'))){
+    const day = el.dataset.calday;
+    if (calMode === 'month' && day !== calDate){
+      /* first tap picks the day and shows it under the grid; a second tap opens it */
+      calDate = day; draw();
+      const dl = $('#daylist');
+      if (dl){ const r = dl.getBoundingClientRect(); if (r.top > window.innerHeight - 160) dl.scrollIntoView({behavior:'smooth', block:'start'}); }
+      return;
+    }
+    calDate = day; calMode = 'day'; draw(); return;
+  }
+  if ((el = hit('data-openday'))){ calDate = el.dataset.openday; calMode = 'day'; draw(); return; }
   if ((el = hit('data-goday'))){ calDate = el.dataset.goday; calMode = 'day'; go('calendar'); return; }
   if ((el = hit('data-shoot'))){
     const [cid, tag, apptId] = el.dataset.shoot.split('|');
