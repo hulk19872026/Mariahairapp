@@ -2553,6 +2553,7 @@ function viewSettings(){
           ? (INTEGRATIONS.photoStore === 'r2' ? 'Cloudflare R2 connected' : 'Volume mounted')
           : 'Not writable')+'</dd>'+
     '</dl>'+
+    (INTEGRATIONS.photoError ? '<p class="tiny" style="margin-top:8px;color:var(--rose)">'+esc(INTEGRATIONS.photoError)+'</p>' : '')+
     (INTEGRATIONS.dryRun ? '<div class="warnbar" style="margin-top:12px">Test mode is on. Messages are written to the log but never actually sent — turn off DRY_RUN on the server when you\'re ready.</div>' : '')+
     ((!INTEGRATIONS.email || !INTEGRATIONS.sms) && !INTEGRATIONS.dryRun ? '<p class="tiny dim" style="margin-top:12px">Keys live on the server, never in this page. Add them to your environment variables and redeploy.</p>' : '')+
   '</div></div>';

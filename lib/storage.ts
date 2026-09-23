@@ -67,12 +67,16 @@ const diskDriver: Driver = {
 
 /* --------------------------------------------------------- r2 / s3 api -- */
 
+/** Reads a variable, forgiving the stray spaces that come with copy-paste. */
+const env = (...names: string[]) =>
+  names.map((n) => process.env[n]?.trim()).find(Boolean) || "";
+
 /** R2 names its variables its own way; accept either spelling. */
-export const bucketName = () => process.env.R2_BUCKET || process.env.S3_BUCKET || "";
+export const bucketName = () => env("R2_BUCKET", "S3_BUCKET");
 
 function endpoint(): string | undefined {
-  if (process.env.S3_ENDPOINT) return process.env.S3_ENDPOINT;
-  const acct = process.env.R2_ACCOUNT_ID;
+  if (env("S3_ENDPOINT")) return env("S3_ENDPOINT");
+  const acct = env("R2_ACCOUNT_ID");
   return acct ? `https://${acct}.r2.cloudflarestorage.com` : undefined;
 }
 
@@ -81,15 +85,14 @@ async function s3() {
   if (s3Client) return s3Client;
   const { S3Client } = await import("@aws-sdk/client-s3");
 
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY_ID;
-  const secretAccessKey =
-    process.env.R2_SECRET_ACCESS_KEY || process.env.S3_SECRET_ACCESS_KEY;
+  const accessKeyId = env("R2_ACCESS_KEY_ID", "S3_ACCESS_KEY_ID");
+  const secretAccessKey = env("R2_SECRET_ACCESS_KEY", "S3_SECRET_ACCESS_KEY");
   if (!accessKeyId || !secretAccessKey)
     throw new Error("R2 keys are missing (R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY).");
 
   s3Client = new S3Client({
     // R2 has no regions; "auto" is what it expects.
-    region: process.env.R2_REGION || process.env.S3_REGION || "auto",
+    region: env("R2_REGION", "S3_REGION") || "auto",
     endpoint: endpoint(),
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
     credentials: { accessKeyId, secretAccessKey },
@@ -164,14 +167,35 @@ export function makeKey(customerId: string, variant: "full" | "thumb", ext = "jp
   return `photos/${customerId}/${id}-${variant}.${ext}`;
 }
 
-/** Confirms the driver can actually be written to, for the Settings screen. */
-export async function storageReady(): Promise<boolean> {
+/**
+ * Confirms the driver can actually be written to, for the Settings screen.
+ * Returns null when it can, otherwise the reason in words she can act on.
+ */
+export async function storageProblem(): Promise<string | null> {
+  if (storage() === s3Driver && !env("R2_ACCOUNT_ID", "S3_ENDPOINT"))
+    return "R2_ACCOUNT_ID is missing.";
   try {
     const key = `photos/_check/${crypto.randomBytes(4).toString("hex")}.jpg`;
     await storage().put(key, Buffer.from([0xff, 0xd8, 0xff, 0xd9]), "image/jpeg");
     await storage().del(key);
-    return true;
-  } catch {
-    return false;
+    return null;
+  } catch (e: any) {
+    return explain(e);
   }
+}
+
+function explain(e: any): string {
+  const code = e?.Code || e?.name || "";
+  const msg = String(e?.message || e || "Unknown error");
+  if (code === "NoSuchBucket")
+    return `No bucket called "${bucketName()}" in this Cloudflare account. Check R2_BUCKET matches the bucket name exactly.`;
+  if (code === "InvalidAccessKeyId" || /access key has length|access key.*(invalid|not)/i.test(msg))
+    return "Cloudflare doesn't recognise R2_ACCESS_KEY_ID. Paste the Access Key ID, not the token value.";
+  if (code === "SignatureDoesNotMatch")
+    return "R2_SECRET_ACCESS_KEY doesn't match the access key. Paste the Secret Access Key again.";
+  if (code === "AccessDenied" || /access denied|unauthorized/i.test(msg))
+    return "The R2 key isn't allowed to write to this bucket. Give the token Object Read & Write on it.";
+  if (/ENOTFOUND|getaddrinfo|EAI_AGAIN/.test(msg))
+    return "Can't reach Cloudflare at that address. Check R2_ACCOUNT_ID is just the Account ID.";
+  return `${code ? code + ": " : ""}${msg}`;
 }
