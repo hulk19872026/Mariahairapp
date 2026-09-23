@@ -11,7 +11,8 @@ import crypto from "node:crypto";
  *           The same code also talks to Backblaze B2, AWS S3 or MinIO; R2 is
  *           just the one this is tuned and documented for.
  *   disk  — the fallback. Writes under UPLOAD_DIR, which on Railway means a
- *           mounted volume. Fine to start with, but not backed up.
+ *           mounted volume. Fine to start with, but not backed up. Once R2 is
+ *           on, photos left on the volume are still read from it and copied up.
  *
  * Nothing is ever served straight from the bucket. Every read goes through
  * /api/photos/[id], which is behind the login — a client's hair photos should
@@ -126,7 +127,11 @@ const s3Driver: Driver = {
       const body = Buffer.from(await res.Body!.transformToByteArray());
       return { body, mime: res.ContentType || "image/jpeg" };
     } catch {
-      return null;
+      // Photos saved before R2 was switched on are still on the volume.
+      // Serve from there and copy up, so the bucket fills in as they're viewed.
+      const old = await diskDriver.get(key);
+      if (old) await s3Driver.put(key, old.body, old.mime).catch(() => {});
+      return old;
     }
   },
   async del(key) {
@@ -139,6 +144,7 @@ const s3Driver: Driver = {
     } catch {
       /* already gone */
     }
+    await diskDriver.del(key);
   },
 };
 
