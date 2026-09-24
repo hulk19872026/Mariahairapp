@@ -289,3 +289,9 @@ model CronRun {
   skipped   Int      @default(0)
   detail    Json     @default("{}")
 }
+
+// one-off data changes that have already been applied (see scripts/data-migrations.ts)
+model DataMigration {
+  id    String   @id
+  ranAt DateTime @default(now())
+}

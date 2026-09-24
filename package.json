@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "prisma db push --skip-generate && next start -p ${PORT:-8080}",
+    "start": "prisma db push --skip-generate && tsx scripts/data-migrations.ts && next start -p ${PORT:-8080}",
     "cron": "tsx scripts/cron.ts",
     "seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
