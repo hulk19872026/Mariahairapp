@@ -6,7 +6,10 @@
  *
  * A failure is logged and never stops the app from starting.
  */
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { prisma } from "../lib/prisma";
+import { fileHash, importCustomers } from "../lib/records-import";
 
 type Item = [name: string, desc: string, price: number, duration: number, category: string];
 
@@ -30,7 +33,10 @@ const LENGTH_AND_LUXE: Item[] = [
   ["Hair Extensions Consultation", "Consultation required; price quoted after", 0, 30, "Extensions"],
 ];
 
-const MIGRATIONS: Array<{ id: string; run: () => Promise<string> }> = [
+type Migration = { id: string; run: () => Promise<string> };
+
+async function migrations(): Promise<Migration[]> {
+  return [
   {
     id: "2026-09-length-and-luxe-menu",
     async run() {
@@ -59,10 +65,32 @@ const MIGRATIONS: Array<{ id: string; run: () => Promise<string> }> = [
       return `menu replaced: ${LENGTH_AND_LUXE.length} added, ${drop.length} removed, ${keep.length} hidden (on past appointments)`;
     },
   },
-];
+  {
+    // The client list exported from Square, checked in as data/clients.csv.
+    // Keyed by the file's hash, so a newer export in the same place imports
+    // again while the same file never runs twice.
+    id: "clients-csv:" + (await hashOf("data/clients.csv")),
+    async run() {
+      const text = await fs.readFile(path.join(process.cwd(), "data", "clients.csv"), "utf8");
+      const s = await importCustomers(text);
+      const problems = s.problems.length ? ` · problems: ${s.problems.slice(0, 5).join("; ")}` : "";
+      return `clients imported: ${s.added} added, ${s.updated} updated, ${s.skipped} skipped of ${s.total}${problems}`;
+    },
+  },
+  ];
+}
+
+async function hashOf(rel: string): Promise<string> {
+  try {
+    return fileHash(await fs.readFile(path.join(process.cwd(), rel), "utf8")).slice(0, 16);
+  } catch {
+    return "missing";
+  }
+}
 
 async function main() {
-  for (const m of MIGRATIONS) {
+  for (const m of await migrations()) {
+    if (m.id.endsWith(":missing")) continue; // nothing to import
     if (await prisma.dataMigration.findUnique({ where: { id: m.id } })) continue;
     try {
       const note = await m.run();
