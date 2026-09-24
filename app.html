@@ -807,6 +807,8 @@ function apptTotal(a){
   const p = a.payment || {};
   return Math.max(0, apptServiceTotal(a) + apptProductTotal(a) - (Number(p.discount)||0) + (Number(p.tip)||0));
 }
+/* what's still owed once any deposit taken at booking is counted */
+function apptDue(a){ return Math.max(0, apptTotal(a) - (Number((a.payment||{}).deposit)||0)); }
 function apptEnd(a){ return a.start + apptDuration(a); }
 function serviceNames(a){ const n = apptServices(a).map(s => s.name); return n.length ? n.join(', ') : (a.title || 'Appointment'); }
 const ACTIVE = a => a.status !== 'cancelled';
@@ -2775,12 +2777,12 @@ function exportData(kind){
         custAppts(c.id).filter(COUNTED).length, custSpend(c.id).toFixed(2), lv?lv.date:'', nv?nv.date:'', h.type, h.formula, h.allergies]); });
     download('clients-'+todayISO()+'.csv', toCSV(rows), 'text/csv');
   } else {
-    const rows = [['Date','Time','Client','Phone','Services','Duration (min)','Status','Service total','Products','Discount','Tip','Total','Method','Payment','Notes']];
+    const rows = [['Date','Time','Client','Phone','Services','Duration (min)','Status','Service total','Products','Discount','Tip','Total','Deposit','Deposit method','Method','Payment','Notes']];
     S.appts.slice().sort((a,b) => a.date.localeCompare(b.date) || a.start-b.start).forEach(a => {
       const c = cust(a.customerId)||{}, p = a.payment||{};
       rows.push([a.date, fmtTime(a.start), fullName(c), c.phone, serviceNames(a), apptDuration(a), statusLabel(a.status),
         apptServiceTotal(a).toFixed(2), apptProductTotal(a).toFixed(2), (p.discount||0), (p.tip||0), apptTotal(a).toFixed(2),
-        p.method||'', p.status||'unpaid', a.notes||'']); });
+        (p.deposit||0), p.depositMethod||'', p.method||'', p.status||'unpaid', a.notes||'']); });
     download('appointments-'+todayISO()+'.csv', toCSV(rows), 'text/csv');
   }
   toast('Downloaded');
@@ -2870,6 +2872,12 @@ function apptForm(id, preset){
       '<label class="field"><span class="lab">Override duration</span><input class="inp" name="duration" type="number" inputmode="numeric" min="5" step="5" placeholder="auto" value="'+(a.duration||'')+'"></label>'+
       '<label class="field"><span class="lab">Override price</span><input class="inp" name="priceOverride" type="number" inputmode="decimal" min="0" step="1" placeholder="auto" value="'+(a.priceOverride??'')+'"></label>'+
     '</div>'+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Discount</span><input class="inp" name="discount" type="number" inputmode="decimal" min="0" step="1" placeholder="0" value="'+((a.payment||{}).discount||'')+'"></label>'+
+      '<label class="field"><span class="lab">Deposit paid</span><input class="inp" name="deposit" type="number" inputmode="decimal" min="0" step="1" placeholder="0" value="'+((a.payment||{}).deposit||'')+'"></label>'+
+    '</div>'+
+    '<div id="depmethod" style="margin:-4px 0 14px"><span class="lab">Deposit paid with</span><div class="picks">'+
+      PAY_METHODS.map(m => '<button class="pick" data-dm="'+m+'" aria-pressed="'+((a.payment||{}).depositMethod===m)+'">'+m+'</button>').join('')+'</div></div>'+
     '<label class="field"><span class="lab">Status</span><select class="inp" name="status">'+
       STATUSES.map(s => '<option value="'+s.id+'"'+(a.status===s.id?' selected':'')+'>'+s.label+'</option>').join('')+'</select></label>'+
     '<label class="field"><span class="lab">Notes for this appointment</span>'+
@@ -2891,6 +2899,10 @@ function apptForm(id, preset){
           live.sel.map(svc).filter(Boolean).reduce((t,s) => t + (Number(s.duration)||0), 0) || 60;
         const po = $('[name="priceOverride"]', root).value;
         const price = po !== '' ? Number(po) : live.sel.map(svc).filter(Boolean).reduce((t,s) => t + (Number(s.price)||0), 0);
+        const disc = Math.max(0, Number($('[name="discount"]', root).value)||0);
+        const dep = Math.max(0, Number($('[name="deposit"]', root).value)||0);
+        const total = Math.max(0, price - disc);
+        $('#depmethod', root).hidden = !dep;
         const probe = {id: a.id || '_new', date: live.date, start: live.start, duration: dur, serviceIds: live.sel};
         const clash = conflictsFor(probe);
         const h = dayHours(live.date);
@@ -2899,7 +2911,12 @@ function apptForm(id, preset){
         sumEl.innerHTML =
           '<div class="spread"><span class="small dim">Ends</span><span class="num">'+fmtTime(live.start + dur)+'</span></div>'+
           '<div class="spread" style="margin-top:4px"><span class="small dim">Duration</span><span class="num">'+dur+' min</span></div>'+
-          '<div class="spread" style="margin-top:4px"><span class="small dim">Total</span><span class="num" style="color:var(--brass);font-size:1.15rem">'+money(price)+'</span></div>'+
+          (disc ? '<div class="spread" style="margin-top:4px"><span class="small dim">Services</span><span class="num">'+money(price)+'</span></div>'+
+                  '<div class="spread" style="margin-top:4px"><span class="small dim">Discount</span><span class="num">−'+money(disc)+'</span></div>' : '')+
+          '<div class="spread" style="margin-top:4px"><span class="small dim">Total</span><span class="num" style="color:var(--brass);font-size:1.15rem">'+money(total)+'</span></div>'+
+          (dep ? '<div class="spread" style="margin-top:4px"><span class="small dim">Deposit paid</span><span class="num">−'+money(dep)+'</span></div>'+
+                 '<div class="spread" style="margin-top:4px"><span class="small dim">Due at the appointment</span><span class="num" style="font-weight:700">'+money(Math.max(0, total - dep))+'</span></div>' : '')+
+          (disc > price ? '<p class="err" style="margin-top:6px">The discount is more than the price.</p>' : '')+
           (clash.length ? '<p class="err" style="margin-top:8px">Overlaps '+esc(fullName(cust(clash[0].customerId)))+' at '+fmtTime(clash[0].start)+'</p>' : '')+
           (outside ? '<p class="err" style="margin-top:6px">'+(h.open ? 'Outside your hours that day ('+fmtTime(h.start)+'–'+fmtTime(h.end)+')' : 'You\'re marked closed that day')+'</p>' : '');
 
@@ -2924,6 +2941,12 @@ function apptForm(id, preset){
       ['date','start','duration','priceOverride','customerId'].forEach(n => {
         const el = $('[name="'+n+'"]', root); if (el) el.addEventListener('change', calc);
       });
+      ['discount','deposit'].forEach(n => $('[name="'+n+'"]', root).addEventListener('input', calc));
+      let depMethod = (a.payment||{}).depositMethod || '';
+      $$('[data-dm]', root).forEach(b => b.onclick = () => {
+        depMethod = depMethod === b.dataset.dm ? '' : b.dataset.dm;
+        $$('[data-dm]', root).forEach(x => x.setAttribute('aria-pressed', x.dataset.dm === depMethod));
+      });
       $('#newcust', root).onclick = () => customerForm(null, rec => {
         const sel = $('[name="customerId"]', root);
         sel.insertAdjacentHTML('beforeend', '<option value="'+rec.id+'">'+esc(fullName(rec))+'</option>');
@@ -2939,7 +2962,14 @@ function apptForm(id, preset){
           toast('Pick a service, or set a price'); return;
         }
         const wasStatus = a.status;
+        const dep = Math.max(0, Number($('[name="deposit"]', root).value)||0);
+        const payment = Object.assign({}, a.payment, {
+          discount: Math.max(0, Number($('[name="discount"]', root).value)||0),
+          deposit: dep,
+          depositMethod: dep ? depMethod : ''
+        });
         const rec = Object.assign(a, {
+          payment,
           id: a.id || uid(),
           customerId: sel.value,
           serviceIds: live.sel,
@@ -2983,6 +3013,9 @@ function apptSheet(id){
       '<dt>Duration</dt><dd>'+apptDuration(a)+' min</dd>'+
       '<dt>Service total</dt><dd>'+money(apptServiceTotal(a))+'</dd>'+
       (apptProductTotal(a) ? '<dt>Products</dt><dd>'+money(apptProductTotal(a))+'</dd>' : '')+
+      (Number(p.discount) ? '<dt>Discount</dt><dd>−'+money(p.discount)+'</dd>' : '')+
+      (Number(p.deposit) ? '<dt>Deposit paid</dt><dd>'+money(p.deposit)+(p.depositMethod ? ' · '+esc(p.depositMethod) : '')+'</dd>' : '')+
+      (!COUNTED(a) && Number(p.deposit) ? '<dt>Due at the appointment</dt><dd style="font-weight:700">'+money(apptDue(a))+'</dd>' : '')+
       (COUNTED(a) ? '<dt>Charged</dt><dd style="color:var(--brass)">'+money(apptTotal(a))+' · '+(p.status==='paid'?esc(p.method||'Paid'):'Unpaid')+'</dd>' : '')+
     '</dl>'+
     (a.notes ? '<div class="note" style="margin-top:14px"><div class="meta">Appointment note</div><p>'+esc(a.notes)+'</p></div>' : '')+
@@ -3028,15 +3061,20 @@ function setStatus(id, status){
 /* ---------- payment ---------- */
 function paymentSheet(id){
   const a = byId('appts', id); if (!a) return;
-  const p = Object.assign({discount:0, tip:0, method:'Cash', status:'paid'}, a.payment || {});
+  const p = Object.assign({discount:0, tip:0}, a.payment || {});
+  /* first checkout: the server sends blanks, so start from Cash and received */
+  if (!p.paidAt){ p.method = p.method || 'Cash'; p.status = 'paid'; }
   const prods = (a.products || []).slice();
   const sTotal = apptServiceTotal(a);
+  const dep = Number(p.deposit)||0;
 
   const body =
     '<div class="card pad" style="background:var(--mist);box-shadow:none;margin-bottom:16px">'+
       '<div class="spread"><span class="small dim">Services</span><span class="num">'+money(sTotal)+'</span></div>'+
       '<div class="spread" style="margin-top:4px"><span class="small dim">Products</span><span class="num" id="pt">'+money(0)+'</span></div>'+
       '<div class="spread" style="margin-top:8px"><span style="font-weight:700">Total</span><span class="num" id="tt" style="font-size:1.4rem;color:var(--brass)">'+money(sTotal)+'</span></div>'+
+      (dep ? '<div class="spread" style="margin-top:4px"><span class="small dim">Deposit paid'+(p.depositMethod ? ' · '+esc(p.depositMethod) : '')+'</span><span class="num">−'+money(dep)+'</span></div>'+
+             '<div class="spread" style="margin-top:4px"><span style="font-weight:700">Due now</span><span class="num" id="due" style="font-weight:700">'+money(sTotal)+'</span></div>' : '')+
     '</div>'+
     '<span class="lab">Products sold</span>'+
     (S.products.length ? '<div class="picks" style="margin-bottom:14px">'+S.products.map(pr =>
@@ -3093,7 +3131,9 @@ function paymentSheet(id){
         const pt = prods.reduce((t,x) => t + x.price*x.qty, 0);
         const d = Number($('[name="discount"]', root).value)||0, ti = Number($('[name="tip"]', root).value)||0;
         $('#pt', root).textContent = money(pt);
-        $('#tt', root).textContent = money(Math.max(0, sTotal + pt - d + ti));
+        const tt = Math.max(0, sTotal + pt - d + ti);
+        $('#tt', root).textContent = money(tt);
+        if (dep) $('#due', root).textContent = money(Math.max(0, tt - dep));
       };
       $$('[data-pp]', root).forEach(b => b.onclick = () => {
         const pr = byId('products', b.dataset.pp);
@@ -3133,8 +3173,8 @@ function paymentSheet(id){
         }
         const before = (a.products||[]).map(x => x.productId);
         a.products = prods;
-        a.payment = { discount:Number($('[name="discount"]', root).value)||0, tip:Number($('[name="tip"]', root).value)||0,
-          method, status: $('[name="paid"]', root).checked ? 'paid' : 'unpaid', paidAt: Date.now() };
+        a.payment = Object.assign({}, a.payment, { discount:Number($('[name="discount"]', root).value)||0, tip:Number($('[name="tip"]', root).value)||0,
+          method, status: $('[name="paid"]', root).checked ? 'paid' : 'unpaid', paidAt: Date.now() });
         if (a.status !== 'completed') a.status = 'completed';
         upsert('appts', a);
         prods.forEach(x => { if (!before.includes(x.productId)){ const pr = byId('products', x.productId);

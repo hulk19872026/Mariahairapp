@@ -109,6 +109,8 @@ model Appointment {
   // payment, recorded when the appointment is marked complete
   products      Json     @default("[]")
   discount      Decimal  @default(0) @db.Decimal(10, 2)
+  deposit       Decimal  @default(0) @db.Decimal(10, 2) // taken at booking, counts toward the total
+  depositMethod String   @default("")
   tip           Decimal  @default(0) @db.Decimal(10, 2)
   payMethod     String   @default("")
   payStatus     String   @default("unpaid")
