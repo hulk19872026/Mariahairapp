@@ -2792,16 +2792,30 @@ function exportData(kind){
   toast('Downloaded');
 }
 /* a client list from a spreadsheet — the server does the matching */
-async function importClientsCsv(file){
+function importClientsCsv(file){
+  openSheet({title:'Import clients',
+    body:'<p class="small" style="margin-bottom:14px">Clients are matched by Square id, phone or email.</p>'+
+      '<button class="btn primary block" data-mode="add" style="margin-bottom:10px">Only add new clients</button>'+
+      '<p class="tiny dim" style="margin:-4px 0 14px">Anyone already in your client list is left exactly as it is.</p>'+
+      '<button class="btn ghost block" data-mode="all">Add new and update existing</button>'+
+      '<p class="tiny dim" style="margin-top:6px">Also copies names, phones and emails from the file onto clients you already have.</p>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $$('[data-mode]', root).forEach(b => b.onclick = () => { closeSheet(); runClientImport(file, b.dataset.mode); });
+    }});
+}
+async function runClientImport(file, mode){
   toast('Importing clients…');
   try {
-    const fd = new FormData(); fd.append('file', file, file.name || 'clients.csv');
+    const fd = new FormData(); fd.append('file', file, file.name || 'clients.csv'); fd.append('mode', mode);
     const res = await fetch('/api/customers/import', {method:'POST', body: fd, credentials:'same-origin'});
     if (res.status === 401){ window.location.href = '/login'; return; }
     const r = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(r.error || 'Import failed');
     await loadState(); draw();
-    const line = r.added+' added, '+r.updated+' updated'+(r.skipped ? ', '+r.skipped+' skipped' : '')+' of '+r.total;
+    const line = r.added+' added, '+(mode === 'add' ? (r.existing||0)+' already in your list' : r.updated+' updated')+
+      (r.skipped ? ', '+r.skipped+' skipped' : '')+' of '+r.total;
     if (r.problems && r.problems.length){
       openSheet({title:'Imported with a few problems',
         body:'<p class="small" style="margin-bottom:10px">'+esc(line)+'</p><ul class="small dim" style="padding-left:18px">'+
