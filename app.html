@@ -2563,8 +2563,7 @@ function viewSettings(){
   s += '<div class="sec"><div class="sec-head"><h2>Calendar & sync</h2></div><div class="card pad">'+
     '<p class="small">Appointments live in this app\'s own calendar. To keep a phone calendar in step, export any appointment as a calendar file from its detail screen and open it — it drops straight into Google Calendar, Apple Calendar or Outlook.</p>'+
     '<button class="btn ghost block" data-exporticsall="1" style="margin-top:12px">'+svg('dl')+'Export all upcoming appointments (.ics)</button>'+
-    '<p class="tiny dim" style="margin-top:10px">Live two-way Google Calendar sync isn\'t built yet — the export above keeps your phone calendar in step.</p>'+
-  '</div></div>';
+  '</div>'+googleCard()+'</div>';
 
   s += '<div class="sec"><div class="sec-head"><h2>Appearance</h2></div><div class="card pad">'+
     '<span class="lab">Colour scheme</span><div class="swatches" style="margin-bottom:16px">'+
@@ -2794,6 +2793,70 @@ function exportData(kind){
   }
   toast('Downloaded');
 }
+/* ---------- Google Calendar ---------- */
+function googleCard(){
+  const g = INTEGRATIONS.google || {};
+  let h = '<div class="card pad" style="margin-top:12px"><div class="spread"><span style="font-weight:700">Google Calendar</span>'+
+    '<span class="small" style="color:'+(g.connected && !g.lastError ? 'var(--teal)' : 'var(--dim)')+'">'+(g.connected ? 'Connected' : 'Not connected')+'</span></div>';
+  if (!g.configured){
+    h += '<p class="small" style="margin-top:8px">Two-way sync needs Google sign-in keys on the server first: add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables and redeploy.</p>'+
+      '<p class="tiny dim" style="margin-top:6px">In Google Cloud, the OAuth client\'s authorised redirect URI is <b>'+esc(location.origin)+'/api/google/callback</b></p>';
+  } else if (!g.connected){
+    h += '<p class="small" style="margin-top:8px">Keep one Google calendar and this app in step, both ways. Appointments you book, move or cancel here change there at once; move or delete them in Google and they change here. A new Google event titled with a client\'s name (\u201cKristine Valentin \u2013 Haircut\u201d) becomes an appointment; personal events stay in Google.</p>'+
+      '<button class="btn primary block" data-gconnect="1" style="margin-top:12px">'+svg('cal')+'Connect Google Calendar</button>';
+  } else {
+    h += '<dl class="kv" style="margin-top:10px">'+
+      '<dt>Account</dt><dd>'+esc(g.email)+'</dd>'+
+      '<dt>Calendar</dt><dd>'+esc(g.calendarName)+'</dd>'+
+      '<dt>Last synced</dt><dd>'+(g.lastSyncAt ? timeAgo(g.lastSyncAt) : 'Not yet')+(g.live ? ' · live' : '')+'</dd>'+
+    '</dl>'+
+    (g.lastError ? '<p class="tiny" style="margin-top:8px;color:var(--rose)">'+esc(g.lastError)+'</p>' : '')+
+    (!g.live ? '<p class="tiny dim" style="margin-top:8px">Changes made in Google come over within the hour; instant updates start once the app is on its https address.</p>' : '')+
+    '<div class="picks" style="margin-top:12px">'+
+      '<button class="btn sm ghost" data-gsync="1">'+svg('send')+'Sync now</button>'+
+      '<button class="btn sm ghost" data-gcal="1">'+svg('cal')+'Change calendar</button>'+
+      '<button class="btn sm danger" data-gdisconnect="1">Disconnect</button>'+
+    '</div>';
+  }
+  return h + '</div>';
+}
+async function googleCall(path, opts){
+  const res = await fetch(path, Object.assign({credentials:'same-origin', headers:{'Content-Type':'application/json'}}, opts||{}));
+  if (res.status === 401){ window.location.href = '/login'; throw new Error('signed out'); }
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(r.error || 'Google Calendar didn\'t answer');
+  return r;
+}
+async function googleSync(){
+  toast('Syncing with Google…');
+  try { await flushOutbox(); const r = await googleCall('/api/google/sync', {method:'POST'}); await loadState(); draw(); toast('Synced — '+r.result); }
+  catch(e){ if (e.message !== 'signed out') toast(e.message); }
+}
+async function googlePickCalendar(){
+  let list;
+  try { list = await googleCall('/api/google/calendars'); } catch(e){ toast(e.message); return; }
+  const cur = (INTEGRATIONS.google||{}).calendarName;
+  openSheet({title:'Which calendar?',
+    body:'<p class="small" style="margin-bottom:12px">Appointments are kept in step with this one calendar. Switching copies upcoming appointments into the new one; events already in the old one stay there.</p>'+
+      '<div class="card list">'+list.map(c => '<button class="item" data-gpick="'+esc(c.id)+'"><span class="grow"><span class="nm">'+esc(c.name)+'</span>'+
+        (c.primary ? '<span class="tiny dim" style="display:block">Main calendar</span>' : '')+'</span>'+(c.name===cur ? '<span class="chip st-completed">Current</span>' : '')+'</button>').join('')+'</div>',
+    foot:'<button class="btn ghost" data-act="cancel">Cancel</button>',
+    onMount(root){
+      $('[data-act="cancel"]', root).onclick = closeSheet;
+      $$('[data-gpick]', root).forEach(b => b.onclick = async () => {
+        closeSheet(); toast('Switching calendar…');
+        try { await googleCall('/api/google/calendars', {method:'POST', body: JSON.stringify({id: b.dataset.gpick})}); await loadState(); draw(); toast('Now syncing with '+b.textContent.replace('Current','').replace('Main calendar','').trim()); }
+        catch(e){ toast(e.message); }
+      });
+    }});
+}
+function googleDisconnect(){
+  confirmSheet('Disconnect Google Calendar?', 'Appointments stop syncing. Events already in Google stay there, and nothing in the app is removed.', 'Disconnect', async () => {
+    try { await googleCall('/api/google/disconnect', {method:'POST'}); await loadState(); draw(); toast('Google Calendar disconnected'); }
+    catch(e){ toast(e.message); }
+  }, true);
+}
+
 /* a client list from a spreadsheet — the server does the matching */
 function importClientsCsv(file){
   openSheet({title:'Import clients',
@@ -3480,6 +3543,10 @@ document.addEventListener('click', e => {
   if (hit('data-import')){ $('#importfile').click(); return; }
   if (hit('data-importcsv')){ $('#importcsvfile').click(); return; }
   if (hit('data-importappts')){ $('#importapptfile').click(); return; }
+  if (hit('data-gconnect')){ window.location.href = '/api/google/connect'; return; }
+  if (hit('data-gsync')){ googleSync(); return; }
+  if (hit('data-gcal')){ googlePickCalendar(); return; }
+  if (hit('data-gdisconnect')){ googleDisconnect(); return; }
   if (hit('data-editbiz')){ bizForm(); return; }
   if ((el = hit('data-hours'))){ hoursForm(Number(el.dataset.hours)); return; }
   if (hit('data-closures')){ closuresForm(); return; }
@@ -3594,6 +3661,16 @@ $('#themebtn').addEventListener('click', () => {
         }
       });
     }, 600);
+  }
+
+  /* back from Google's consent screen */
+  const gq = new URLSearchParams(location.search).get('google');
+  if (gq){
+    history.replaceState(null, '', location.pathname);
+    go('settings');
+    toast({connected:'Google Calendar connected — appointments are syncing', denied:'Google access wasn\'t allowed',
+      expired:'That took too long — try Connect again', failed:'Couldn\'t connect Google Calendar — see Settings',
+      'missing-keys':'Add the Google keys on the server first'}[gq] || 'Google Calendar: '+gq);
   }
 
   /* keep the clock honest, and pick up anything done on another device */

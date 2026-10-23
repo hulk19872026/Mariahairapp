@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/automation";
 import { integrationStatus } from "@/lib/senders";
 import { storageName, storageProblem } from "@/lib/storage";
+import { googleStatus } from "@/lib/google";
 import { handle, ok, requireApiSession } from "@/lib/api";
 import {
   appointmentOut,
@@ -31,7 +32,7 @@ async function photoProblem(): Promise<string | null> {
 /** Everything the app screen needs, in one round trip. */
 export const GET = handle(async () => {
   await requireApiSession();
-  const [settings, customers, services, products, appts, notes, msgs, photos, coupons, lastRun, photoError] =
+  const [settings, customers, services, products, appts, notes, msgs, photos, coupons, lastRun, photoError, google] =
     await Promise.all([
       getSettings(),
       prisma.customer.findMany({ orderBy: [{ last: "asc" }, { first: "asc" }] }),
@@ -44,6 +45,7 @@ export const GET = handle(async () => {
       prisma.coupon.findMany({ orderBy: { createdAt: "desc" } }),
       prisma.cronRun.findFirst({ orderBy: { startedAt: "desc" } }),
       photoProblem(),
+      googleStatus(),
     ]);
 
   return ok({
@@ -61,6 +63,7 @@ export const GET = handle(async () => {
       photos: !photoError,
       photoError,
       photoStore: storageName(),
+      google,
     },
     lastRun: lastRun
       ? { at: lastRun.startedAt.getTime(), sent: lastRun.sent, failed: lastRun.failed, skipped: lastRun.skipped }

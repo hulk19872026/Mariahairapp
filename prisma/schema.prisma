@@ -116,6 +116,11 @@ model Appointment {
   payStatus     String   @default("unpaid")
   paidAt        DateTime?
 
+  // the matching Google Calendar event, and its `updated` stamp the last
+  // time the two agreed, so a change that echoes back isn't applied twice
+  googleEventId String @default("")
+  googleUpdated String @default("")
+
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   notesList Note[]
@@ -294,4 +299,24 @@ model CronRun {
 model DataMigration {
   id    String   @id
   ranAt DateTime @default(now())
+}
+
+// the connected Google Calendar (one row, id "google"); see lib/google.ts
+model GoogleCalendar {
+  id             String    @id @default("google")
+  email          String    @default("")
+  refreshToken   String    @default("") @db.Text
+  accessToken    String    @default("") @db.Text
+  accessExpires  DateTime?
+  calendarId     String    @default("primary")
+  calendarName   String    @default("")
+  syncToken      String    @default("") @db.Text
+  webhookUrl     String    @default("")
+  channelId      String    @default("")
+  channelToken   String    @default("")
+  channelResource String   @default("")
+  channelExpires DateTime?
+  lastSyncAt     DateTime?
+  lastError      String    @default("") @db.Text
+  updatedAt      DateTime  @updatedAt
 }
