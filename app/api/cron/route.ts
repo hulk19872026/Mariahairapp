@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runAutomations } from "@/lib/automation";
+import { syncNow } from "@/lib/google";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,8 +24,9 @@ async function handle(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    const google = await syncNow().catch((e) => `failed: ${e instanceof Error ? e.message : e}`);
     const summary = await runAutomations();
-    return NextResponse.json({ ok: true, ...summary });
+    return NextResponse.json({ ok: true, google, ...summary });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

@@ -1,5 +1,6 @@
 import { ApiError, handle, ok, readJson, requireApiSession } from "@/lib/api";
 import { isKind, upsertRecord } from "@/lib/records";
+import { pushAppointment } from "@/lib/google";
 
 export const dynamic = "force-dynamic";
 
@@ -11,5 +12,8 @@ export const POST = handle(async (req: Request, ctx: Ctx) => {
   const { kind } = await ctx.params;
   if (!isKind(kind)) throw new ApiError(`Unknown record type "${kind}".`, 404);
   const body = await readJson(req);
-  return ok(await upsertRecord(kind, body));
+  const saved = await upsertRecord(kind, body);
+  // keep the Google Calendar event in step (does nothing when not connected)
+  if (kind === "appts") await pushAppointment(String(saved.id));
+  return ok(saved);
 });
