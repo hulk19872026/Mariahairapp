@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "./lib/session";
 
 /** Everything is behind the login except these. */
-const PUBLIC = ["/login", "/forgot", "/api/cron", "/api/health", "/api/google/webhook"];
+const PUBLIC = ["/login", "/forgot", "/api/cron", "/api/health", "/api/google/webhook", "/privacy", "/terms"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
