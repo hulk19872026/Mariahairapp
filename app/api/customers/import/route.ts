@@ -7,6 +7,8 @@ export const maxDuration = 120;
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /**
+ * `mode=add` (form field or query) only adds clients not already in the book.
+ *
  * Import a client list from a CSV (a Square customer export, or any sheet
  * with name / phone / email columns). Accepts a multipart `file` field or
  * the CSV text as the request body.
@@ -14,10 +16,12 @@ const MAX_BYTES = 5 * 1024 * 1024;
 export const POST = handle(async (req: Request) => {
   await requireApiSession();
   let text = "";
+  let addOnly = new URL(req.url).searchParams.get("mode") === "add";
   const type = req.headers.get("content-type") || "";
   if (type.includes("multipart/form-data")) {
     const fd = await req.formData();
     const f = fd.get("file");
+    if (fd.get("mode") === "add") addOnly = true;
     if (!f || typeof f === "string") throw new ApiError("Attach a CSV file.");
     if (f.size > MAX_BYTES) throw new ApiError("That file is too large.");
     text = await f.text();
@@ -26,5 +30,5 @@ export const POST = handle(async (req: Request) => {
     if (text.length > MAX_BYTES) throw new ApiError("That file is too large.");
   }
   if (!text.trim()) throw new ApiError("The file is empty.");
-  return ok(await importCustomers(text));
+  return ok(await importCustomers(text, { addOnly }));
 });

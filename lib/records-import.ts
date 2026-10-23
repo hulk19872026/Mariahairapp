@@ -16,6 +16,8 @@ export type ImportSummary = {
   added: number;
   updated: number;
   skipped: number;
+  /** rows left alone because the client is already in the book (add-only imports) */
+  existing: number;
   problems: string[];
 };
 
@@ -190,9 +192,16 @@ export function fileHash(text: string): string {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
-export async function importCustomers(csvText: string): Promise<ImportSummary> {
+/**
+ * `addOnly` leaves every client already in the book untouched and only adds
+ * the rest. "Already in the book" is a match on Square id, phone or email.
+ */
+export async function importCustomers(
+  csvText: string,
+  opts: { addOnly?: boolean } = {}
+): Promise<ImportSummary> {
   const rows = parseCsv(csvText);
-  const summary: ImportSummary = { total: 0, added: 0, updated: 0, skipped: 0, problems: [] };
+  const summary: ImportSummary = { total: 0, added: 0, updated: 0, skipped: 0, existing: 0, problems: [] };
   if (rows.length < 2) { summary.problems.push("The file has no client rows."); return summary; }
 
   const cols = columnMap(rows[0]);
@@ -220,6 +229,14 @@ export async function importCustomers(csvText: string): Promise<ImportSummary> {
     const dupKey = d.id ?? (pk ? "p:" + pk : d.email ? "e:" + d.email : `${d.first} ${d.last}`.toLowerCase());
     if (seen.has(dupKey)) { summary.skipped++; continue; }
     seen.add(dupKey);
+
+    if (opts.addOnly) {
+      const known =
+        (d.id && existing.some((c) => c.id === d.id)) ||
+        (pk && byPhone.has(pk)) ||
+        (d.email && byEmail.has(d.email));
+      if (known) { summary.existing++; continue; }
+    }
 
     // fields we only fill in, never blank out, on an existing client
     const fill = {
