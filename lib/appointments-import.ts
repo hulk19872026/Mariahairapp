@@ -15,7 +15,12 @@ import { cleanPhone, parseCsv, phoneKey } from "./records-import";
  * - The client is found by Square id, then phone, then email, then exact
  *   full name (only when one client has it). Nobody found → a new client.
  * - Each row gets a stable id from date + time + client, so importing the
- *   same file twice adds nothing and never overwrites later edits.
+ *   same file twice adds nothing and never overwrites later edits. The one
+ *   exception: a booking imported without services gets them filled in when
+ *   a later file lists them.
+ * - Service can list several, separated by ";". Names match the menu loosely
+ *   ("Color glaze (blowout included)" finds "Color Glaze"); anything not on
+ *   the menu is kept in the notes as "Service: …".
  * - Without a Status, past dates import as completed (paid in Square, so
  *   they never sit in "Waiting on payment") and later ones as scheduled.
  * - Upcoming ones are marked as already confirmed: the client got that from
@@ -25,6 +30,8 @@ import { cleanPhone, parseCsv, phoneKey } from "./records-import";
 export type ApptImportSummary = {
   total: number;
   added: number;
+  /** existing bookings that had no services and got them from this file */
+  updated: number;
   existing: number;
   newClients: number;
   skipped: number;
@@ -79,7 +86,7 @@ function minutes(raw: string): number {
 const nameKey = (first: string, last: string) => norm(`${first} ${last}`);
 
 export async function importAppointments(csvText: string): Promise<ApptImportSummary> {
-  const summary: ApptImportSummary = { total: 0, added: 0, existing: 0, newClients: 0, skipped: 0, problems: [] };
+  const summary: ApptImportSummary = { total: 0, added: 0, updated: 0, existing: 0, newClients: 0, skipped: 0, problems: [] };
   const rows = parseCsv(csvText);
   if (rows.length < 2) { summary.problems.push("The file has no appointment rows."); return summary; }
 
@@ -96,7 +103,10 @@ export async function importAppointments(csvText: string): Promise<ApptImportSum
   const st = await getSettings();
   const today = localDate(new Date(), st.timezone || "America/New_York");
   const services = await prisma.service.findMany();
-  const svcByName = new Map(services.map((s) => [norm(s.name), s]));
+  // loose service names: no "(…)" asides, no trailing plural s
+  const svcKey = (n: string) => norm(n.replace(/\([^)]*\)/g, "")).replace(/s$/, "");
+  const svcByName = new Map(services.filter((s) => s.active).map((s) => [svcKey(s.name), s]));
+  for (const s of services) if (!svcByName.has(svcKey(s.name))) svcByName.set(svcKey(s.name), s);
 
   const customers = await prisma.customer.findMany({ select: { id: true, first: true, last: true, phone: true, email: true } });
   const byId = new Set(customers.map((c) => c.id));
@@ -146,14 +156,31 @@ export async function importAppointments(csvText: string): Promise<ApptImportSum
 
       // the appointment, once
       const id = "imp_" + crypto.createHash("sha256").update(`${date}|${start}|${customerId}`).digest("hex").slice(0, 20);
-      if (await prisma.appointment.findUnique({ where: { id }, select: { id: true } })) { summary.existing++; continue; }
+      const svcNames = g("service").split(/[;\n]/).map((x) => clean(x)).filter(Boolean);
+      const svcs = svcNames.map((n) => svcByName.get(svcKey(n))).filter((x): x is NonNullable<typeof x> => !!x);
+      const unknown = svcNames.filter((n) => !svcByName.has(svcKey(n)));
+      const svcNote = unknown.length ? `Service: ${unknown.join(", ")}` : "";
 
-      const svcName = g("service");
-      const svc = svcName ? svcByName.get(norm(svcName)) : undefined;
+      const prior = await prisma.appointment.findUnique({ where: { id }, select: { serviceIds: true, notes: true } });
+      if (prior) {
+        if (!prior.serviceIds.length && svcNames.length) {
+          await prisma.appointment.update({
+            where: { id },
+            data: {
+              serviceIds: svcs.map((x) => x.id),
+              ...(svcNote && !prior.notes.includes(svcNote)
+                ? { notes: [svcNote, prior.notes].filter(Boolean).join("\n") } : {}),
+            },
+          });
+          summary.updated++;
+        } else summary.existing++;
+        continue;
+      }
+
       const statusIn = norm(g("status"));
       const status = STATUSES.includes(statusIn) ? statusIn : date < today ? "completed" : "scheduled";
       const price = g("price") === "" ? null : Number(g("price").replace(/[^0-9.]/g, ""));
-      const notes = [svcName && !svc ? `Service: ${svcName}` : "", g("notes")].filter(Boolean).join("\n");
+      const notes = [svcNote, g("notes")].filter(Boolean).join("\n");
 
       await prisma.appointment.create({
         data: {
@@ -162,7 +189,7 @@ export async function importAppointments(csvText: string): Promise<ApptImportSum
           date,
           start,
           duration: Math.max(0, Math.round(Number(g("duration")) || 0)),
-          serviceIds: svc ? [svc.id] : [],
+          serviceIds: svcs.map((x) => x.id),
           priceOverride: price != null && Number.isFinite(price) ? price : null,
           status,
           notes,

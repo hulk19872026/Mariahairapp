@@ -2817,7 +2817,7 @@ async function importApptsCsv(file){
     const r = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(r.error || 'Import failed');
     await loadState(); draw();
-    const line = r.added+' added'+(r.existing ? ', '+r.existing+' already here' : '')+
+    const line = r.added+' added'+(r.updated ? ', '+r.updated+' given their services' : '')+(r.existing ? ', '+r.existing+' already here' : '')+
       (r.newClients ? ', '+r.newClients+' new client'+(r.newClients>1?'s':'') : '')+(r.skipped ? ', '+r.skipped+' skipped' : '')+' of '+r.total;
     if (r.problems && r.problems.length){
       openSheet({title:'Imported with a few problems',
