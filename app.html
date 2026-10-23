@@ -2591,6 +2591,9 @@ function viewSettings(){
     '<button class="btn ghost block" data-importcsv="1">'+svg('userplus')+'Import clients from a spreadsheet (CSV)</button>'+
     '<p class="tiny dim" style="margin:-4px 0 4px">A Square customer export works as is. Any sheet with name, phone and email columns does too. Clients already in the book are updated, not duplicated.</p>'+
     '<input type="file" id="importcsvfile" accept=".csv,text/csv" hidden>'+
+    '<button class="btn ghost block" data-importappts="1">'+svg('cal')+'Import appointments from a spreadsheet (CSV)</button>'+
+    '<p class="tiny dim" style="margin:-4px 0 4px">Date, Time and Client columns, plus Service, Duration, Price or Notes if you have them. Importing the same file twice adds nothing.</p>'+
+    '<input type="file" id="importapptfile" accept=".csv,text/csv" hidden>'+
   '</div></div>';
 
   s += '<div class="sec"><div class="sec-head"><h2>Account</h2></div>'+
@@ -2804,6 +2807,26 @@ function importClientsCsv(file){
       $('[data-act="cancel"]', root).onclick = closeSheet;
       $$('[data-mode]', root).forEach(b => b.onclick = () => { closeSheet(); runClientImport(file, b.dataset.mode); });
     }});
+}
+async function importApptsCsv(file){
+  toast('Importing appointments…');
+  try {
+    const fd = new FormData(); fd.append('file', file, file.name || 'appointments.csv');
+    const res = await fetch('/api/appointments/import', {method:'POST', body: fd, credentials:'same-origin'});
+    if (res.status === 401){ window.location.href = '/login'; return; }
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(r.error || 'Import failed');
+    await loadState(); draw();
+    const line = r.added+' added'+(r.existing ? ', '+r.existing+' already here' : '')+
+      (r.newClients ? ', '+r.newClients+' new client'+(r.newClients>1?'s':'') : '')+(r.skipped ? ', '+r.skipped+' skipped' : '')+' of '+r.total;
+    if (r.problems && r.problems.length){
+      openSheet({title:'Imported with a few problems',
+        body:'<p class="small" style="margin-bottom:10px">'+esc(line)+'</p><ul class="small dim" style="padding-left:18px">'+
+          r.problems.map(p => '<li>'+esc(p)+'</li>').join('')+'</ul>',
+        foot:'<button class="btn primary" data-act="ok">OK</button>',
+        onMount(root){ $('[data-act="ok"]', root).onclick = closeSheet; }});
+    } else toast('Appointments imported — '+line);
+  } catch(e){ toast(e.message || 'Could not import that file'); }
 }
 async function runClientImport(file, mode){
   toast('Importing clients…');
@@ -3456,6 +3479,7 @@ document.addEventListener('click', e => {
   }
   if (hit('data-import')){ $('#importfile').click(); return; }
   if (hit('data-importcsv')){ $('#importcsvfile').click(); return; }
+  if (hit('data-importappts')){ $('#importapptfile').click(); return; }
   if (hit('data-editbiz')){ bizForm(); return; }
   if ((el = hit('data-hours'))){ hoursForm(Number(el.dataset.hours)); return; }
   if (hit('data-closures')){ closuresForm(); return; }
@@ -3508,6 +3532,8 @@ function wireView(){
   if (imp) imp.addEventListener('change', e => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ''; });
   const impc = $('#importcsvfile');
   if (impc) impc.addEventListener('change', e => { if (e.target.files[0]) importClientsCsv(e.target.files[0]); e.target.value = ''; });
+  const impa = $('#importapptfile');
+  if (impa) impa.addEventListener('change', e => { if (e.target.files[0]) importApptsCsv(e.target.files[0]); e.target.value = ''; });
   if (route === 'calendar' && calMode !== 'month') wireDrag();
   if (route === 'calendar' && calMode !== 'month'){
     const body = $('.gc-body');
