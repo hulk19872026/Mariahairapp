@@ -209,7 +209,8 @@ function lengthOf(a: Appointment, services: Service[]): number {
 function eventFor(a: Appointment, c: Customer, services: Service[], tz: string, currency: string) {
   const svcs = a.serviceIds.map((id) => services.find((s) => s.id === id)).filter((s): s is Service => !!s);
   const name = `${c.first} ${c.last}`.trim() || "Client";
-  const price = a.priceOverride != null ? Number(a.priceOverride) : svcs.reduce((t, s) => t + Number(s.price), 0);
+  const agreed = (a.servicePrices ?? {}) as Record<string, number>;
+  const price = a.priceOverride != null ? Number(a.priceOverride) : svcs.reduce((t, s) => t + Number(agreed[s.id] ?? s.price), 0);
   const status = a.status === "confirmed" ? "Confirmed" : a.status === "completed" ? "Completed" : a.status === "noshow" ? "No-show" : "";
   return {
     summary: `${name}${svcs.length ? " – " + svcs.map((s) => s.name).join(", ") : ""}`,

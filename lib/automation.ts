@@ -101,9 +101,10 @@ export function serviceNames(a: Appointment, services: Service[]): string {
 }
 export function servicePrice(a: Appointment, services: Service[]): number {
   if (a.priceOverride != null) return Number(a.priceOverride);
+  const agreed = (a.servicePrices ?? {}) as Record<string, number>;
   return a.serviceIds
-    .map((id) => services.find((s) => s.id === id))
-    .reduce((t, s) => t + Number(s?.price ?? 0), 0);
+    .map((id) => agreed[id] ?? services.find((s) => s.id === id)?.price ?? 0)
+    .reduce((t: number, p) => t + Number(p), 0);
 }
 
 /* -------------------------------------------------------------------------

@@ -105,6 +105,9 @@ model Appointment {
   notes      String   @default("") @db.Text
 
   priceOverride Decimal? @db.Decimal(10, 2)
+  // the price agreed for each service on this visit, by service id, when it
+  // differs from the menu's starting price; the total adds these up
+  servicePrices Json     @default("{}")
 
   // payment, recorded when the appointment is marked complete
   products      Json     @default("[]")
