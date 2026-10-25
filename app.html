@@ -223,6 +223,19 @@ select.inp{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.
 .picks{display:flex; flex-wrap:wrap; gap:7px}
 .pick{padding:8px 12px; border-radius:99px; border:1.5px solid var(--border); font-size:.84rem; font-weight:600; background:var(--surface)}
 .pick[aria-pressed="true"]{background:var(--plum); color:#fff; border-color:var(--plum)}
+.kp-scrim{position:fixed; inset:0; z-index:200; background:rgba(20,12,24,.45); display:flex; align-items:center; justify-content:center; padding:16px}
+.kp{background:var(--surface); color:var(--text); border-radius:20px; width:100%; max-width:360px; padding:18px; box-shadow:0 20px 60px -20px rgba(0,0,0,.5)}
+.kp-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+.kp-name{font-weight:800; font-size:1.05rem}
+.kp-show{display:flex; align-items:baseline; justify-content:center; gap:4px; margin:14px 0 10px; color:var(--brass)}
+.kp-show span{font-size:1.4rem; font-weight:700}
+.kp-show b{font-size:2.6rem; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.kp-quick{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:12px}
+.kp-keys{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.kp-key{height:54px; border-radius:14px; background:var(--mist); font-size:1.35rem; font-weight:700; color:var(--text)}
+.kp-key:active{transform:scale(.97); filter:brightness(.95)}
+.kp-foot{display:grid; grid-template-columns:1fr 1.4fr; gap:8px; margin-top:12px}
+@media (max-width:520px){ .kp-scrim{align-items:flex-end; padding:0} .kp{max-width:none; border-radius:20px 20px 0 0; padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))} }
 :root[data-theme="dark"] .pick[aria-pressed="true"]{color:#1B1420}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pick[aria-pressed="true"]{color:#1B1420}}
 .err{color:var(--rose); font-size:.78rem; font-weight:600; margin-top:4px}
@@ -798,9 +811,11 @@ function apptDuration(a){
   const d = apptServices(a).reduce((t,s) => t + (Number(s.duration)||0), 0);
   return d || 60;
 }
+/* the price for one service on this visit: what was agreed, else the menu price */
+function svcPriceIn(a, s){ const p = (a.servicePrices||{})[s.id]; return p != null && p !== '' ? Number(p)||0 : Number(s.price)||0; }
 function apptServiceTotal(a){
   if (a.priceOverride != null && a.priceOverride !== '') return Number(a.priceOverride)||0;
-  return apptServices(a).reduce((t,s) => t + (Number(s.price)||0), 0);
+  return apptServices(a).reduce((t,s) => t + svcPriceIn(a, s), 0);
 }
 function apptProductTotal(a){ return (a.products||[]).reduce((t,p) => t + (Number(p.price)||0) * (Number(p.qty)||0), 0); }
 function apptTotal(a){
@@ -2961,12 +2976,84 @@ function icsFor(list){
 /* ============================================================
    Appointments
    ============================================================ */
+/* ---------- price keypad ----------
+   Pops over the booking form (not a sheet, so the form keeps what's typed).
+   Opens on the menu price; the first key pressed starts a fresh amount. */
+function priceKeypad(o){
+  const s = o.service;
+  const menu = Number(s.price)||0;
+  let val = String(o.value ?? menu), fresh = true;
+  const el = document.createElement('div');
+  el.className = 'kp-scrim';
+  el.innerHTML =
+    '<div class="kp" role="dialog" aria-modal="true" aria-label="Price for '+esc(s.name)+'">'+
+      '<div class="kp-head"><div><div class="kp-name">'+esc(s.name)+'</div>'+
+        '<div class="tiny dim">'+esc(s.desc || ('Menu price '+money(menu)))+'</div></div>'+
+        '<button class="iconbtn" data-kp="close" aria-label="Close">'+svg('x')+'</button></div>'+
+      '<div class="kp-show"><span>'+esc(S.settings.currency||'$')+'</span><b data-kp-val></b></div>'+
+      '<div class="kp-quick">'+
+        '<button class="pick" data-kp-set="'+menu+'">Menu '+money(menu)+'</button>'+
+        [25,50,100].map(n => '<button class="pick" data-kp-add="'+n+'">+'+money(n)+'</button>').join('')+
+      '</div>'+
+      '<div class="kp-keys">'+['1','2','3','4','5','6','7','8','9','.','0','del'].map(k =>
+        '<button class="kp-key" data-key="'+k+'"'+(k==='del'?' aria-label="Delete"':'')+'>'+(k==='del' ? '\u232B' : k)+'</button>').join('')+'</div>'+
+      '<div class="kp-foot">'+
+        (o.adding ? '<button class="btn ghost" data-kp="close">Cancel</button>'
+                  : '<button class="btn danger" data-kp="remove">Remove</button>')+
+        '<button class="btn primary" data-kp="ok"></button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(el);
+  const show = $('[data-kp-val]', el), ok = $('[data-kp="ok"]', el);
+  const num = () => Math.round((Number(val)||0) * 100) / 100;
+  const paint = () => {
+    show.textContent = val === '' ? '0' : val;
+    ok.textContent = (o.adding ? 'Add · ' : 'Set · ') + money(num());
+  };
+  const press = k => {
+    if (k === 'del'){ val = fresh ? '' : val.slice(0, -1); fresh = false; }
+    else {
+      if (fresh){ val = ''; fresh = false; }
+      if (k === '.' && val.includes('.')) return;
+      if (val.includes('.') && val.split('.')[1].length >= 2) return;
+      if (val.replace('.', '').length >= 6) return;
+      val = (val === '0' && k !== '.') ? k : val + k;
+      if (val === '.') val = '0.';
+    }
+    paint();
+  };
+  const close = () => { document.removeEventListener('keydown', onKey, true); el.remove(); };
+  const done = () => { const p = num(); close(); o.onDone(p); };
+  function onKey(e){
+    if (/^[0-9.]$/.test(e.key)) press(e.key);
+    else if (e.key === 'Backspace') press('del');
+    else if (e.key === 'Enter') done();
+    else if (e.key === 'Escape') close();
+    else return;
+    e.preventDefault(); e.stopImmediatePropagation();
+  }
+  document.addEventListener('keydown', onKey, true);
+  el.addEventListener('click', e => {
+    if (e.target === el) return close();
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.key) press(t.dataset.key);
+    else if (t.dataset.kpSet != null){ val = String(Number(t.dataset.kpSet)); fresh = true; paint(); }
+    else if (t.dataset.kpAdd != null){ val = String(num() + Number(t.dataset.kpAdd)); fresh = true; paint(); }
+    else if (t.dataset.kp === 'ok') done();
+    else if (t.dataset.kp === 'remove'){ close(); o.onRemove(); }
+    else if (t.dataset.kp === 'close') close();
+  });
+  paint();
+  ok.focus();
+}
+
 function apptForm(id, preset){
   const a = id ? JSON.parse(JSON.stringify(byId('appts', id))) : Object.assign({
     id:'', customerId:'', serviceIds:[], date: calDate || todayISO(), start: 10*60,
     status:'scheduled', notes:'', products:[], payment:{}
   }, preset || {});
-  const live = {sel: (a.serviceIds||[]).slice(), customerId: a.customerId, date: a.date, start: a.start};
+  const live = {sel: (a.serviceIds||[]).slice(), prices: Object.assign({}, a.servicePrices||{}), customerId: a.customerId, date: a.date, start: a.start};
+  const priceOf = s => live.prices[s.id] != null ? Number(live.prices[s.id]) : Number(s.price)||0;
 
   const activeServices = S.services.filter(s => s.active !== false || live.sel.includes(s.id));
   const custOptions = S.customers.slice().sort((x,y) => fullName(x).localeCompare(fullName(y)));
@@ -2981,9 +3068,9 @@ function apptForm(id, preset){
     '<span class="lab">Services</span>'+
     (activeServices.length ? '<div class="picks" id="svcpicks" style="margin-bottom:6px">'+
       activeServices.map(s => '<button class="pick" data-sv="'+s.id+'" aria-pressed="'+live.sel.includes(s.id)+'">'+
-        esc(s.name)+' · '+money(s.price)+'</button>').join('')+'</div>'
+        esc(s.name)+' · <span data-svp>'+money(live.sel.includes(s.id) ? priceOf(s) : s.price)+'</span></button>').join('')+'</div>'
       : '<p class="small dim" style="margin-bottom:10px">No services yet — add one from the Services tab, or just set a price below.</p>')+
-    '<p class="tiny dim" style="margin-bottom:14px">Tap to add. Duration and price add up on their own.</p>'+
+    '<p class="tiny dim" style="margin-bottom:14px">Tap a service to add it and set today\'s price; tap it again to change the price or remove it. Duration and total add up on their own.</p>'+
 
     '<div class="grid2">'+
       '<label class="field"><span class="lab">Date</span><input class="inp" name="date" type="date" value="'+esc(live.date)+'"></label>'+
@@ -3023,7 +3110,7 @@ function apptForm(id, preset){
         const dur = Number($('[name="duration"]', root).value) ||
           live.sel.map(svc).filter(Boolean).reduce((t,s) => t + (Number(s.duration)||0), 0) || 60;
         const po = $('[name="priceOverride"]', root).value;
-        const price = po !== '' ? Number(po) : live.sel.map(svc).filter(Boolean).reduce((t,s) => t + (Number(s.price)||0), 0);
+        const price = po !== '' ? Number(po) : live.sel.map(svc).filter(Boolean).reduce((t,s) => t + priceOf(s), 0);
         const disc = Math.max(0, Number($('[name="discount"]', root).value)||0);
         const dep = Math.max(0, Number($('[name="deposit"]', root).value)||0);
         const total = Math.max(0, price - disc);
@@ -3058,10 +3145,24 @@ function apptForm(id, preset){
       }
 
       $$('[data-sv]', root).forEach(b => b.onclick = () => {
-        const sid = b.dataset.sv;
-        live.sel = live.sel.includes(sid) ? live.sel.filter(x => x !== sid) : live.sel.concat([sid]);
-        b.setAttribute('aria-pressed', live.sel.includes(sid));
-        calc();
+        const s = svc(b.dataset.sv); if (!s) return;
+        const on = live.sel.includes(s.id);
+        const paint = () => {
+          b.setAttribute('aria-pressed', live.sel.includes(s.id));
+          $('[data-svp]', b).textContent = money(live.sel.includes(s.id) ? priceOf(s) : s.price);
+          calc();
+        };
+        priceKeypad({
+          service: s,
+          value: on ? priceOf(s) : Number(s.price)||0,
+          adding: !on,
+          onDone(p){
+            if (!on) live.sel = live.sel.concat([s.id]);
+            if (p === (Number(s.price)||0)) delete live.prices[s.id]; else live.prices[s.id] = p;
+            paint();
+          },
+          onRemove(){ live.sel = live.sel.filter(x => x !== s.id); delete live.prices[s.id]; paint(); }
+        });
       });
       ['date','start','duration','priceOverride','customerId'].forEach(n => {
         const el = $('[name="'+n+'"]', root); if (el) el.addEventListener('change', calc);
@@ -3098,6 +3199,7 @@ function apptForm(id, preset){
           id: a.id || uid(),
           customerId: sel.value,
           serviceIds: live.sel,
+          servicePrices: Object.fromEntries(Object.entries(live.prices).filter(([k]) => live.sel.includes(k))),
           date: $('[name="date"]', root).value,
           start: readTime(),
           duration: Number($('[name="duration"]', root).value) || 0,

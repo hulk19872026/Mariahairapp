@@ -280,6 +280,7 @@ export function appointmentOut(a: Appointment) {
     start: a.start,
     duration: a.duration || undefined,
     priceOverride: a.priceOverride == null ? null : dec(a.priceOverride),
+    servicePrices: obj(a.servicePrices),
     status: a.status,
     notes: a.notes,
     createdAt: a.createdAt.getTime(),
@@ -307,6 +308,11 @@ function appointmentIn(v: Rec): Prisma.AppointmentUncheckedCreateInput {
     start: Math.min(1439, Math.max(0, int(v.start))),
     duration: Math.max(0, int(v.duration)),
     priceOverride: v.priceOverride == null || v.priceOverride === "" ? null : num(v.priceOverride),
+    servicePrices: Object.fromEntries(
+      Object.entries(obj(v.servicePrices))
+        .filter(([, p]) => p !== "" && p != null && Number.isFinite(Number(p)))
+        .map(([id, p]) => [id, Math.max(0, num(p))])
+    ),
     status: str(v.status, "scheduled") || "scheduled",
     notes: str(v.notes),
     createdAt: date(v.createdAt) ?? new Date(),
